@@ -84,7 +84,7 @@ export default function RegisterPage() {
 
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append('fullName', data.fullName);
+      formData.append('fullname', data.fullName);
       formData.append('username', data.username);
       formData.append('email', data.email);
       formData.append('password', data.password);

@@ -1,107 +1,66 @@
-import { baseApi } from './baseApi';
-
-
+// store/services/userApi.js
+import { baseApi } from './baseApi.js';
 
 export const userApi = baseApi.injectEndpoints({
+    endpoints: (builder) => ({
 
-  endpoints: (builder) => ({
+        getCurrentUser: builder.query({
+            query: () => ({ url: '/users/current-user', method: 'GET' }),
+            providesTags: ['User'],
+        }),
 
-    getChannelProfile: builder.query({
+        // ← Now takes username string, not _id
+        getChannelProfile: builder.query({
+            query: (username) => ({
+                url: `/users/channel/${username}`,  // ← was /users/c/${channelId}
+                method: 'GET',
+            }),
+            providesTags: (result, error, username) => [{ type: 'User', id: username }],
+        }),
 
-      query: (channelId) => ({
+        // ← For channel page: get videos by owner
+        getUserVideos: builder.query({
+            query: (params) => ({
+                url: '/videos/user',
+                method: 'GET',
+                params,
+            }),
+            providesTags: ['Video'],
+        }),
 
-        url: `/users/c/${channelId}`,
+        updateAccountDetails: builder.mutation({
+            query: (data) => ({
+                url: '/users/update-profile',  // ← was /users/update-account
+                method: 'PATCH',
+                data,
+            }),
+            invalidatesTags: ['User'],
+        }),
 
-        method: 'GET',
+        updateAvatar: builder.mutation({
+            query: (formData) => ({
+                url: '/users/avatar',
+                method: 'PATCH',
+                data: formData,
+            }),
+            invalidatesTags: ['User'],
+        }),
 
-      }),
-
-      providesTags: (result, error, id) => [{ type: 'User', id }],
-
+        changePassword: builder.mutation({
+            query: (data) => ({
+                url: '/users/change-password',
+                method: 'POST',
+                data,
+            }),
+        }),
     }),
-
-    
-
-    // ADDED: Mutations for Settings Page
-
-    updateAccountDetails: builder.mutation({
-
-      query: (data) => ({
-
-        url: '/users/update-account', // Adjust to match your Express route
-
-        method: 'PATCH',
-
-        data, 
-
-      }),
-
-      invalidatesTags: ['User'],
-
-    }),
-
-    getCurrentUser: builder.query({
-
-      query: () => ({
-
-        url: '/users/current-user', 
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['User'],
-
-    }),    
-
-    updateAvatar: builder.mutation({
-
-      query: (formData) => ({
-
-        url: '/users/avatar', // Adjust to match your Express route
-
-        method: 'PATCH',
-
-        data: formData, // FormData for file upload
-
-      }),
-
-      invalidatesTags: ['User'],
-
-    }),
-
-    
-
-    changePassword: builder.mutation({
-
-      query: (data) => ({
-
-        url: '/users/change-password', // Adjust to match your Express route
-
-        method: 'POST',
-
-        data, 
-
-      }),
-
-    }),
-
-  }),
-
 });
 
-
-
-export const { 
-
-  useGetChannelProfileQuery,
-
-  useUpdateAccountDetailsMutation,
-
-  useUpdateAvatarMutation,
-
-  useChangePasswordMutation,
-
-  useGetCurrentUserQuery 
-
+export const {
+    useGetCurrentUserQuery,
+    useGetChannelProfileQuery,
+    useGetUserVideosQuery,
+    useUpdateAccountDetailsMutation,
+    useUpdateAvatarMutation,
+    useChangePasswordMutation,
 } = userApi;

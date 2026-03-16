@@ -1,83 +1,83 @@
-import { baseApi } from './baseApi';
-
-
+// store/services/tweetApi.js
+import { baseApi } from './baseApi.js';
 
 export const tweetApi = baseApi.injectEndpoints({
+    endpoints: (builder) => ({
 
-  endpoints: (builder) => ({
+        getTweets: builder.query({
+            query: (params) => ({
+                url: '/tweet/my-tweets',  // ← was /tweets
+                method: 'GET',
+                params,
+            }),
+            providesTags: ['Tweet'],
+        }),
 
-    getTweets: builder.query({
+        getUserTimeline: builder.query({
+            query: () => ({
+                url: '/tweet/timeline',  // ← was missing entirely
+                method: 'GET',
+            }),
+            providesTags: ['Tweet'],
+        }),
 
-      query: () => ({
+        getTweetById: builder.query({
+            query: (tweetId) => ({
+                url: `/tweet/${tweetId}`,  // ← was /tweets/${id}
+                method: 'GET',
+            }),
+        }),
 
-        url: '/tweets', // Adjust to match your Express backend route
+        createTweet: builder.mutation({
+            query: (formData) => ({
+                url: '/tweet/create',  // ← was /tweets
+                method: 'POST',
+                data: formData,  // FormData — supports media uploads
+            }),
+            invalidatesTags: ['Tweet'],
+        }),
 
-        method: 'GET',
+        deleteTweet: builder.mutation({
+            query: (tweetId) => ({
+                url: `/tweet/${tweetId}`,  // ← was /tweets/${id}
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Tweet'],
+        }),
 
-      }),
+        getMentions: builder.query({
+            query: (params) => ({
+                url: '/tweet/mentions',
+                method: 'GET',
+                params,
+            }),
+        }),
 
-      providesTags: ['Tweet'],
+        getTrendingHashtags: builder.query({
+            query: (params) => ({
+                url: '/tweet/trending',
+                method: 'GET',
+                params,
+            }),
+        }),
 
+        getTweetsByHashtag: builder.query({
+            query: ({ hashtag, ...params }) => ({
+                url: `/tweet/hashtags/${hashtag}`,
+                method: 'GET',
+                params,
+            }),
+        }),
     }),
-
-    getUserTweets: builder.query({
-
-      query: (userId) => ({
-
-        url: `/tweets/user/${userId}`,
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['Tweet'],
-
-    }),
-
-    createTweet: builder.mutation({
-
-      query: (content) => ({
-
-        url: '/tweets',
-
-        method: 'POST',
-
-        data: { content },
-
-      }),
-
-      invalidatesTags: ['Tweet'], // Refreshes the feed automatically
-
-    }),
-
-    deleteTweet: builder.mutation({
-
-      query: (tweetId) => ({
-
-        url: `/tweets/${tweetId}`,
-
-        method: 'DELETE',
-
-      }),
-
-      invalidatesTags: ['Tweet'],
-
-    }),
-
-  }),
-
 });
 
-
-
-export const { 
-
-  useGetTweetsQuery, 
-
-  useGetUserTweetsQuery, 
-
-  useCreateTweetMutation, 
-
-  useDeleteTweetMutation 
-
+export const {
+    useGetTweetsQuery,
+    useGetUserTimelineQuery,
+    useGetTweetByIdQuery,
+    useCreateTweetMutation,
+    useDeleteTweetMutation,
+    useGetMentionsQuery,
+    useGetTrendingHashtagsQuery,
+    useGetTweetsByHashtagQuery,
 } = tweetApi;

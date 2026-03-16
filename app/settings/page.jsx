@@ -112,7 +112,7 @@ export default function SettingsPage() {
 
     defaultValues: {
 
-      fullName: user?.fullName || "",
+      fullName: user?.fullname || "",
 
       email: user?.email || "",
 
@@ -148,7 +148,7 @@ export default function SettingsPage() {
 
     if (user) {
 
-      resetProfile({ fullName: user.fullName || "", email: user.email || "" });
+      resetProfile({ fullName: user.fullname || "", email: user.email || "" });
 
       if (!avatarFile) setAvatarPreview(user.avatar || "");
 
@@ -224,7 +224,7 @@ export default function SettingsPage() {
 
       dispatch(setCredentials({ 
 
-        user: { ...user, fullName: data.fullName, email: data.email }, 
+        user: { ...user, fullname: data.fullName, email: data.email }, 
 
         accessToken 
 

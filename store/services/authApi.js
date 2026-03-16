@@ -1,23 +1,30 @@
-import { baseApi } from './baseApi';
+// store/services/authApi.js — add logout endpoint
 
+import { baseApi } from "./baseApi.js";
 export const authApi = baseApi.injectEndpoints({
-  endpoints: (builder) => ({
-    login: builder.mutation({
-      query: (credentials) => ({
-        url: '/users/login', // Adjust this to match your Express backend route
-        method: 'POST',
-        data: credentials,   // Note: Our custom axios adapter uses 'data', not 'body'
-      }),
+    endpoints: (builder) => ({
+        login: builder.mutation({
+            query: (credentials) => ({
+                url: '/users/login',
+                method: 'POST',
+                data: credentials,
+            }),
+        }),
+        register: builder.mutation({
+            query: (userData) => ({
+                url: '/users/register',
+                method: 'POST',
+                data: userData,
+            }),
+        }),
+        // ← ADD THIS
+        logout: builder.mutation({
+            query: () => ({
+                url: '/users/logout',
+                method: 'POST',
+            }),
+        }),
     }),
-    register: builder.mutation({
-      query: (userData) => ({
-        url: '/users/register', // Adjust this to match your Express backend route
-        method: 'POST',
-        data: userData,
-        // If your backend expects FormData for an avatar upload, we can adjust this later
-      }),
-    }),
-  }),
 });
 
-export const { useLoginMutation, useRegisterMutation } = authApi;
+export const { useLoginMutation, useRegisterMutation, useLogoutMutation } = authApi;

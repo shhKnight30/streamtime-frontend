@@ -1,65 +1,28 @@
-import { baseApi } from './baseApi';
-
-
+// store/services/dashboardApi.js  — no URL changes needed, backend now has these routes
+import { baseApi } from './baseApi.js';
 
 export const dashboardApi = baseApi.injectEndpoints({
+    endpoints: (builder) => ({
 
-  endpoints: (builder) => ({
+        getDashboardStats: builder.query({
+            query: () => ({ url: '/dashboard/stats', method: 'GET' }),
+            providesTags: ['Video', 'User'],
+        }),
 
-    getDashboardStats: builder.query({
+        getDashboardVideos: builder.query({
+            query: (params) => ({ url: '/dashboard/videos', method: 'GET', params }),
+            providesTags: ['Video'],
+        }),
 
-      query: () => ({
-
-        url: '/dashboard/stats', // Adjust to match your backend route
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['Video', 'User'],
-
+        deleteVideo: builder.mutation({
+            query: (videoId) => ({ url: `/videos/${videoId}`, method: 'DELETE' }),
+            invalidatesTags: ['Video'],
+        }),
     }),
-
-    getDashboardVideos: builder.query({
-
-      query: () => ({
-
-        url: '/dashboard/videos', // Adjust to match your backend route
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['Video'],
-
-    }),
-
-    deleteVideo: builder.mutation({
-
-      query: (videoId) => ({
-
-        url: `/videos/${videoId}`,
-
-        method: 'DELETE',
-
-      }),
-
-      invalidatesTags: ['Video'], // Refreshes the table automatically
-
-    }),
-
-  }),
-
 });
 
-
-
-export const { 
-
-  useGetDashboardStatsQuery, 
-
-  useGetDashboardVideosQuery,
-
-  useDeleteVideoMutation
-
+export const {
+    useGetDashboardStatsQuery,
+    useGetDashboardVideosQuery,
+    useDeleteVideoMutation,
 } = dashboardApi;

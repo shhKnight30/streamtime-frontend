@@ -23,9 +23,9 @@ export default function PlaylistsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   
   // Skip the query if user is not loaded yet to prevent API errors
-  const { data, isLoading, isError } = useGetUserPlaylistsQuery(user?._id, {
-    skip: !user?._id,
-  });
+  const { data, isLoading, isError } = useGetUserPlaylistsQuery(undefined, {
+    skip: !user, 
+});
   
   const [createPlaylist, { isLoading: isCreating }] = useCreatePlaylistMutation();
   const playlists = data?.data || [];

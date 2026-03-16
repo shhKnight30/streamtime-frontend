@@ -1,65 +1,39 @@
-import { baseApi } from './baseApi';
-
-
+// store/services/historyApi.js
+import { baseApi } from './baseApi.js';
 
 export const historyApi = baseApi.injectEndpoints({
+    endpoints: (builder) => ({
 
-  endpoints: (builder) => ({
+        getWatchHistory: builder.query({
+            query: (params) => ({
+                url: '/users/history',  // ← route now exists in backend
+                method: 'GET',
+                params,
+            }),
+            providesTags: ['User'],
+        }),
 
-    getWatchHistory: builder.query({
+        clearWatchHistory: builder.mutation({
+            query: () => ({
+                url: '/users/history/clear',  // ← route now exists
+                method: 'PATCH',
+            }),
+            invalidatesTags: ['User'],
+        }),
 
-      query: () => ({
-
-        url: '/users/history', // Adjust to match your Express route
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['Video', 'User'],
-
+        getUserComments: builder.query({
+            query: (params) => ({
+                url: '/comment/user',  // ← was /comments/user/me (wrong path + wrong mount)
+                method: 'GET',
+                params,
+            }),
+            providesTags: ['Comment'],
+        }),
     }),
-
-    getUserComments: builder.query({
-
-      query: () => ({
-
-        url: '/comments/user/me', // Adjust to match your Express route
-
-        method: 'GET',
-
-      }),
-
-      providesTags: ['Comment'],
-
-    }),
-
-    clearWatchHistory: builder.mutation({
-
-      query: () => ({
-
-        url: '/users/history/clear',
-
-        method: 'PATCH',
-
-      }),
-
-      invalidatesTags: ['Video', 'User'],
-
-    }),
-
-  }),
-
 });
 
-
-
-export const { 
-
-  useGetWatchHistoryQuery, 
-
-  useGetUserCommentsQuery, 
-
-  useClearWatchHistoryMutation 
-
+export const {
+    useGetWatchHistoryQuery,
+    useClearWatchHistoryMutation,
+    useGetUserCommentsQuery,
 } = historyApi;
