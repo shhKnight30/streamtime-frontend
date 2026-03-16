@@ -4,18 +4,19 @@ import { useGetAllVideosQuery } from "@/store/services/videoApi";
 import { VideoCard } from "@/components/video/VideoCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-export default function Home() {
-  // Pass any params if needed, like { page: 1, limit: 12 }
-  const { data, isLoading, isError } = useGetAllVideosQuery({});
+export function SearchClient({ query }) {
+  // Pass the search query to the API. 
+  // Adjust the key ('query', 'search', 'title', etc.) to match what your backend expects.
+  const { data, isLoading, isError } = useGetAllVideosQuery({ query });
 
-  // Backend returns: { data: { videos: [...], pagination: {...} } }
-  const videos = data?.data?.videos || [];
+  const videos = data?.data || [];
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <h1 className="mb-6 text-xl font-bold tracking-tight">Recommended for you</h1>
+      <h1 className="mb-6 text-xl font-bold tracking-tight">
+        Search results for &quot;{query}&quot;
+      </h1>
 
-      {/* Loading State */}
       {isLoading && (
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
@@ -33,14 +34,12 @@ export default function Home() {
         </div>
       )}
 
-      {/* Error State */}
       {isError && (
         <div className="flex h-40 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500">
-          <p>Failed to load videos. Please try again later.</p>
+          <p>Failed to load search results. Please try again later.</p>
         </div>
       )}
 
-      {/* Success State: Video Grid */}
       {!isLoading && !isError && videos.length > 0 && (
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {videos.map((video) => (
@@ -49,10 +48,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && !isError && videos.length === 0 && (
         <div className="flex h-64 flex-col items-center justify-center text-[var(--text-muted)]">
-          <p>No videos found. Be the first to upload!</p>
+          <p>No videos found for &quot;{query}&quot;.</p>
         </div>
       )}
     </div>
