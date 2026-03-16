@@ -8,14 +8,14 @@ import { Button } from "../ui/Button";
 import { useDeleteTweetMutation } from "@/store/services/tweetApi";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/DropdownMenu";
-
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 export function TweetCard({ tweet }) {
     const { user } = useSelector((state) => state.auth);
     const [deleteTweet, { isLoading: isDeleting }] = useDeleteTweetMutation();
-
+    const requireAuth = useRequireAuth()
     const isOwner = user?._id === tweet?.user?._id;
 
-    const handleDelete = async () => {
+    const handleDelete = requireAuth(async () => {
         if (!window.confirm("Delete this tweet?")) return;
         try {
             await deleteTweet(tweet._id).unwrap();
@@ -23,7 +23,7 @@ export function TweetCard({ tweet }) {
         } catch (err) {
             toast.error("Failed to delete tweet");
         }
-    };
+    })
 
     return (
         <div className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">

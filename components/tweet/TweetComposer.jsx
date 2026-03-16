@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import { Button } from "../ui/Button";
 import { useCreateTweetMutation } from "@/store/services/tweetApi";
-
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 const tweetSchema = z.object({
     content: z.string().min(1, "Cannot post an empty tweet").max(280, "Tweet is too long"),
 });
@@ -15,12 +15,12 @@ const tweetSchema = z.object({
 export function TweetComposer() {
     const { user } = useSelector((state) => state.auth);
     const [createTweet, { isLoading }] = useCreateTweetMutation();
-
+    const requireAuth = useRequireAuth()
     const { register, handleSubmit, reset, formState: { errors } } = useForm({
         resolver: zodResolver(tweetSchema),
     });
 
-    const onSubmit = async (data) => {
+    const onSubmit = requireAuth(async (data) => {
         try {
             // ← Build FormData — backend expects multipart/form-data for tweet/create
             const formData = new FormData();
@@ -32,7 +32,7 @@ export function TweetComposer() {
         } catch (err) {
             toast.error(err?.data?.message || "Failed to post tweet");
         }
-    };
+    })
 
     if (!user) return null;
 

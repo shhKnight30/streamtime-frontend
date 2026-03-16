@@ -13,7 +13,7 @@ import { PlaylistCard } from "@/components/playlist/PlaylistCard";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
-
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 const playlistSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name is too long"),
 });
@@ -21,7 +21,7 @@ const playlistSchema = z.object({
 export default function PlaylistsPage() {
   const { user } = useSelector((state) => state.auth);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
+  const requireAuth = useRequireAuth()
   // Skip the query if user is not loaded yet to prevent API errors
   const { data, isLoading, isError } = useGetUserPlaylistsQuery(undefined, {
     skip: !user, 
@@ -34,7 +34,7 @@ export default function PlaylistsPage() {
     resolver: zodResolver(playlistSchema),
   });
 
-  const onSubmit = async (formData) => {
+  const onSubmit = requireAuth(async (formData) => {
     try {
       await createPlaylist(formData).unwrap();
       reset();
@@ -43,7 +43,7 @@ export default function PlaylistsPage() {
     } catch (err) {
       toast.error(err?.data?.message || "Failed to create playlist.");
     }
-  };
+  });
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">

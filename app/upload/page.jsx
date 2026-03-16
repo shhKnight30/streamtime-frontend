@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
 import { useUploadVideoMutation } from "@/store/services/videoApi";
-
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 // File size limits matching backend spec
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024; // 5MB (updated from 2MB)
@@ -66,7 +66,7 @@ const uploadSchema = z.object({
 export default function UploadPage() {
   const router = useRouter();
   const [uploadVideoFile, { isLoading }] = useUploadVideoMutation();
-
+  const requireAuth = useRequireAuth();
   // Local state for files and UI
   const [videoFile, setVideoFile] = useState(null);
   const [thumbnailFile, setThumbnailFile] = useState(null);
@@ -186,12 +186,11 @@ export default function UploadPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const onSubmit = async (data) => {
+  const onSubmit = (async (data) => {
     if (!videoFile) {
       toast.error("Please select a video file.");
       return;
     }
-
     // Construct FormData for multipart/form-data backend processing
     const formData = new FormData();
     formData.append("videoFile", videoFile);
@@ -229,7 +228,7 @@ export default function UploadPage() {
       const errorMessage = err?.data?.message || "Failed to upload video. Please try again.";
       toast.error(errorMessage);
     }
-  };
+  })
 
   const removeVideo = () => {
     setVideoFile(null);

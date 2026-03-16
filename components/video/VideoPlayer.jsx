@@ -1,56 +1,38 @@
 "use client";
 
-import { useState, useRef } from "react";
-import ReactPlayer from "react-player";
+import { useState } from "react";
 
 export function VideoPlayer({
-  src,
-  poster,
-  title,
-  layout = 'default',
-  autoplay = false,
-  controls = true,
-  className = '',
-  onPlay,
-  onPause,
-  onEnded,
-  width = '100%',
-  height = '100%',
+    src,
+    poster,
+    title,
+    autoplay = false,
+    controls = true,
+    className = '',
+    onPlay,
+    onPause,
+    onEnded,
 }) {
-  const [isPlaying, setIsPlaying] = useState(autoplay);
-  const playerRef = useRef(null);
+    const videoUrl = Array.isArray(src) ? src[0] : src;
 
-  const handlePlay = () => { setIsPlaying(true); onPlay?.(); };
-  const handlePause = () => { setIsPlaying(false); onPause?.(); };
-  const handleEnded = () => { setIsPlaying(false); onEnded?.(); };
-
-  const videoUrl = Array.isArray(src) ? src[0] : src;
-
-  return (
-    <div className={`video-player-container relative w-full aspect-video ${className}`}>
-      <ReactPlayer
-        ref={playerRef}
-        url={videoUrl}
-        poster={poster}
-        playing={isPlaying} 
-        controls={controls}
-        width={width}
-        height={height}
-        light={poster && !autoplay}
-        pip={true}
-        stopOnUnmount={false}
-        playsinline={true}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onEnded={handleEnded}
-        config={{
-          file: {
-            attributes: { preload: 'metadata' },
-            forceVideo: true,
-          }
-        }}
-        style={{ backgroundColor: '#000000', borderRadius: '12px', overflow: 'hidden' }}
-      />
-    </div>
-  );
+    return (
+        <div className={`relative w-full ${className}`} style={{ paddingTop: '56.25%' }}>
+            <video
+                src={videoUrl}
+                poster={poster || ''}
+                controls={controls}
+                autoPlay={autoplay}
+                className="absolute top-0 left-0 w-full h-full"
+                crossOrigin="anonymous"
+                preload="metadata"
+                playsInline
+                onPlay={onPlay}
+                onPause={onPause}
+                onEnded={onEnded}
+                onError={(e) => console.log('Video error:', e.target.error)}
+            >
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    );
 }
