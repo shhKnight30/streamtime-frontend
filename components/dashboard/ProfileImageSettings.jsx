@@ -1,217 +1,173 @@
 "use client";
 
 import { useState } from "react";
-import { formatTimeAgo, formatViews } from "@/lib/formatters";
-import { useDeleteVideoMutation } from "@/store/services/dashboardApi";
-import { useUpdateVideoMutation } from "@/store/services/videoApi"; // ✅ Imported the update mutation
-import { Edit, Trash2, X } from "lucide-react";
+import { 
+  useGetCurrentUserQuery, 
+  useUpdateAvatarMutation, 
+  useUpdateCoverImageMutation 
+} from "@/store/services/userApi";
+import { Camera, Image as ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/Button";
 
-export function VideoTable({ videos }) {
-  const [deleteVideo, { isLoading: isDeleting }] = useDeleteVideoMutation();
-  const [updateVideo, { isLoading: isUpdating }] = useUpdateVideoMutation();
+export function ProfileImageSettings() {
+  const { data: userResponse, isLoading: isUserLoading } = useGetCurrentUserQuery();
+  const user = userResponse?.data;
 
-  // ✅ State for Edit Modal
-  const [editingVideo, setEditingVideo] = useState(null);
-  const [editForm, setEditForm] = useState({
-    title: "",
-    description: "",
-    isPublished: false,
-  });
+  const [updateAvatar, { isLoading: isUpdatingAvatar }] = useUpdateAvatarMutation();
+  const [updateCover, { isLoading: isUpdatingCover }] = useUpdateCoverImageMutation();
 
-  const handleDelete = async (videoId) => {
-    if (!window.confirm("Are you sure you want to delete this video? This cannot be undone.")) return;
-    
-    try {
-      await deleteVideo(videoId).unwrap();
-      toast.success("Video deleted successfully");
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to delete video");
+  // Local state for image previews
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  
+  // Local state for actual files to upload
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [coverFile, setCoverFile] = useState(null);
+
+  const handleImageChange = (e, type) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type & size (e.g., max 5MB)
+    if (!file.type.startsWith("image/")) {
+      return toast.error("Please select a valid image file.");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error("Image must be less than 5MB.");
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    if (type === "avatar") {
+      setAvatarFile(file);
+      setAvatarPreview(previewUrl);
+    } else {
+      setCoverFile(file);
+      setCoverPreview(previewUrl);
     }
   };
 
-  // ✅ Open modal and populate data
-  const handleEditClick = (video) => {
-    setEditingVideo(video);
-    setEditForm({
-      title: video.title || "",
-      description: video.description || "",
-      isPublished: video.isPublished || false,
-    });
-  };
-
-  // ✅ Handle Edit Form Submission
-  const handleUpdate = async (e) => {
-    e.preventDefault();
+  const handleUpload = async (type) => {
     try {
-      await updateVideo({
-        videoId: editingVideo._id,
-        ...editForm,
-      }).unwrap();
+      const formData = new FormData();
       
-      toast.success("Video updated successfully");
-      setEditingVideo(null); // Close modal
+      if (type === "avatar") {
+        formData.append("avatar", avatarFile);
+        await updateAvatar(formData).unwrap();
+        toast.success("Avatar updated successfully!");
+        setAvatarFile(null);
+      } else {
+        formData.append("coverImage", coverFile);
+        await updateCover(formData).unwrap();
+        toast.success("Cover image updated successfully!");
+        setCoverFile(null);
+      }
     } catch (err) {
-      toast.error(err?.data?.message || "Failed to update video");
+      toast.error(err?.data?.message || `Failed to update ${type}`);
     }
   };
 
-  // ✅ Handle form input changes
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setEditForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
-
-  if (!videos || videos.length === 0) {
-    return (
-      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)]">
-        No videos uploaded yet.
-      </div>
-    );
+  if (isUserLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-[var(--surface-raised)]" />;
   }
 
   return (
-    <>
-      <div className="w-full overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-muted)]">
-            <tr>
-              <th className="p-4 font-medium">Video</th>
-              <th className="p-4 font-medium">Status</th>
-              <th className="p-4 font-medium">Date Uploaded</th>
-              <th className="p-4 font-medium">Views</th>
-              <th className="p-4 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)]">
-            {videos.map((video) => (
-              <tr key={video._id} className="transition-colors hover:bg-[var(--surface-raised)]/50">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-20 shrink-0 overflow-hidden rounded bg-[var(--surface-raised)]">
-                      <img src={video.thumbnail} alt={video.title} className="h-full w-full object-cover" />
-                    </div>
-                    <p className="line-clamp-2 max-w-[250px] font-medium text-[var(--text-primary)]">
-                      {video.title}
-                    </p>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${video.isPublished ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                    {video.isPublished ? "Published" : "Draft"}
-                  </span>
-                </td>
-                <td className="p-4 text-[var(--text-muted)]">{formatTimeAgo(video.createdAt)}</td>
-                <td className="p-4 text-[var(--text-muted)]">{formatViews(video.views || 0)}</td>
-                <td className="p-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleEditClick(video)} // ✅ Triggers Edit Modal
-                      className="h-8 w-8 text-blue-500 hover:text-blue-600"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleDelete(video._id)}
-                      disabled={isDeleting}
-                      className="h-8 w-8 text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-8 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+      
+      {/* --- COVER IMAGE SECTION --- */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Channel Cover Image</h3>
+        <p className="text-sm text-[var(--text-muted)]">
+          This image will appear at the top of your channel page. Recommended size: 1920x1080.
+        </p>
+        
+        <div className="relative h-48 w-full overflow-hidden rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface-raised)] group">
+          <img 
+            src={coverPreview || user?.coverImage || "https://via.placeholder.com/1920x1080?text=No+Cover+Image"} 
+            alt="Cover Preview" 
+            className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-50"
+          />
+          <label className="absolute inset-0 flex cursor-pointer items-center justify-center flex-col gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="rounded-full bg-black/50 p-3 text-white backdrop-blur-sm">
+              <ImageIcon className="h-6 w-6" />
+            </div>
+            <span className="text-sm font-medium text-white bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">Change Cover</span>
+            <input 
+              type="file" 
+              accept="image/png, image/jpeg, image/webp" 
+              className="hidden" 
+              onChange={(e) => handleImageChange(e, "cover")}
+            />
+          </label>
+        </div>
+
+        {coverFile && (
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => { setCoverFile(null); setCoverPreview(null); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => handleUpload("cover")} 
+              disabled={isUpdatingCover}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {isUpdatingCover ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save Cover
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* ✅ Edit Video Modal Overlay */}
-      {editingVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-[var(--border)] p-4">
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Edit Video Details</h2>
-              <button 
-                onClick={() => setEditingVideo(null)}
-                className="rounded-full p-1 text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <hr className="border-[var(--border)]" />
 
-            {/* Modal Form */}
-            <form onSubmit={handleUpdate} className="p-4 space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-[var(--text-primary)]">Title</label>
-                <input 
-                  name="title"
-                  value={editForm.title}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="Enter video title"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-[var(--text-primary)]">Description</label>
-                <textarea 
-                  name="description"
-                  value={editForm.description}
-                  onChange={handleChange}
-                  required
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-2.5 text-sm text-[var(--text-primary)] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="Enter video description"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input 
-                  type="checkbox"
-                  name="isPublished"
-                  id="isPublished"
-                  checked={editForm.isPublished}
-                  onChange={handleChange}
-                  className="h-4 w-4 cursor-pointer rounded border-[var(--border)] text-blue-600 focus:ring-blue-500 bg-[var(--surface-raised)]"
-                />
-                <label htmlFor="isPublished" className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
-                  Publish Video (Visible to public)
-                </label>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border)]">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={() => setEditingVideo(null)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isUpdating}
-                  className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-70"
-                >
-                  {isUpdating ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </div>
+      {/* --- AVATAR SECTION --- */}
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1 max-w-sm">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Profile Avatar</h3>
+          <p className="text-sm text-[var(--text-muted)]">
+            Your avatar shows up next to your videos and comments. Recommended: Square image, at least 250x250.
+          </p>
         </div>
-      )}
-    </>
+
+        <div className="flex items-center gap-6">
+          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-raised)] group">
+            <img 
+              src={avatarPreview || user?.avatar || "https://via.placeholder.com/150"} 
+              alt="Avatar Preview" 
+              className="h-full w-full object-cover transition-opacity group-hover:opacity-50"
+            />
+            <label className="absolute inset-0 flex cursor-pointer items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="rounded-full bg-black/50 p-2 text-white backdrop-blur-sm">
+                <Camera className="h-5 w-5" />
+              </div>
+              <input 
+                type="file" 
+                accept="image/png, image/jpeg, image/webp" 
+                className="hidden" 
+                onChange={(e) => handleImageChange(e, "avatar")}
+              />
+            </label>
+          </div>
+
+          {avatarFile && (
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={() => handleUpload("avatar")} 
+                disabled={isUpdatingAvatar}
+                className="bg-blue-600 text-white hover:bg-blue-700"
+              >
+                {isUpdatingAvatar ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Save Avatar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}>
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+    </div>
   );
 }

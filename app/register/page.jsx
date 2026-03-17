@@ -38,7 +38,7 @@ const registerSchema = z.object({
 
   password: z.string().min(6, "Password must be at least 6 characters"),
 
-  avatar: z.instanceof(File), 
+  avatar: z.any().optional(),
 
 });
 
@@ -66,7 +66,21 @@ export default function RegisterPage() {
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
+    
     if (file) {
+      // ✅ 1. Check if it's an image
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload a valid image file (JPEG, PNG, etc).");
+        return;
+      }
+
+      // ✅ 2. Check file size (e.g., max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        toast.error("Image size must be less than 5MB.");
+        return;
+      }
+
       setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {

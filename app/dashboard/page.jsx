@@ -5,7 +5,7 @@ import { Eye, Users, Video, ThumbsUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { VideoTable } from "@/components/dashboard/VideoTable";
-
+import { SubscribersList } from "@/components/dashboard/SubscribersList";
 export default function DashboardPage() {
   const { data: statsData, isLoading: statsLoading } = useGetDashboardStatsQuery();
   const { data: videosData, isLoading: videosLoading } = useGetDashboardVideosQuery();

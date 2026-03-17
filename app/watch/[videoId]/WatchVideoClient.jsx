@@ -15,6 +15,8 @@ import { useMemo } from "react";
 import { CommentSection } from "@/components/comment/CommentSection";
 import { useState } from "react";
 import ViewTracker from "@/components/video/ViewTracker";
+import { AddToPlaylistModal } from "@/components/playlist/AddToPlaylistModal";
+import { useEffect } from "react";
 export function WatchVideoClient({ videoId }) {
   const requireAuth = useRequireAuth();
   const { data, isLoading, isError } = useGetVideoByIdQuery(videoId);
@@ -26,7 +28,21 @@ export function WatchVideoClient({ videoId }) {
   const secureVideoURL = video?.videoURL
   const secureThumbnail = video?.thumbnail
   // console.log(secureVideoURL)
-
+  const [localLikes, setLocalLikes] = useState(video?.likes || 0);
+  useEffect(() => {
+    if (video?.likes !== undefined) setLocalLikes(video.likes);
+  }, [video?.likes]);
+  const handleLike = requireAuth(async () => {
+    if (!user) { toast.error("Please log in to like"); return; }
+    try {
+      await toggleLike({ contentId: videoId, contentType: 'video' }).unwrap();
+      // optimistic update
+      setLocalLikes(prev => isLiked ? prev - 1 : prev + 1);
+      refetchLike();
+    } catch (err) {
+      toast.error("Failed to toggle like");
+    }
+  });
   const { data: subStatus } = useCheckSubscriptionStatusQuery(video?.owner, {
     skip: !video?.owner || !user,
   });
@@ -59,15 +75,15 @@ export function WatchVideoClient({ videoId }) {
     }
   });
 
-  const handleLike = requireAuth(async () => {
-    if (!user) { toast.error("Please log in to like"); return; }
-    try {
-      await toggleLike({ contentId: videoId, contentType: 'video' }).unwrap();
-      refetchLike();
-    } catch (err) {
-      toast.error("Failed to toggle like");
-    }
-  });
+  // const handleLike = requireAuth(async () => {
+  //   if (!user) { toast.error("Please log in to like"); return; }
+  //   try {
+  //     await toggleLike({ contentId: videoId, contentType: 'video' }).unwrap();
+  //     refetchLike();
+  //   } catch (err) {
+  //     toast.error("Failed to toggle like");
+  //   }
+  // });
 
   if (isLoading) {
     return (
@@ -145,7 +161,24 @@ export function WatchVideoClient({ videoId }) {
               <ThumbsDown className="h-4 w-4" />
             </Button>
           </div>
-          <Button variant="ghost" className="rounded-full bg-[var(--surface-raised)] px-4 hover:bg-[var(--surface)]">
+          <Button 
+            variant="ghost" 
+            className="rounded-full bg-[var(--surface-raised)] px-4 hover:bg-[var(--surface)]"
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({
+                  title: video?.title,
+                  url: window.location.href,
+                }).catch(() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Link copied to clipboard!");
+                });
+              } else {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Link copied to clipboard!");
+              }
+            }}
+          >
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>

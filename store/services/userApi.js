@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const userApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         getCurrentUser: builder.query({

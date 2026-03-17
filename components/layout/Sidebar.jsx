@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
-import { Home, Compass, PlaySquare, Clock, ThumbsUp, Users, Settings, HelpCircle } from "lucide-react";
+// ✅ Added MessageSquare for the Tweets/Community icon
+import { Home, Compass, PlaySquare, Clock, ThumbsUp, Users, Settings, HelpCircle, MessageSquare } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { SheetClose } from "../ui/Sheet";
 
@@ -15,6 +16,8 @@ export function Sidebar() {
     { name: "Home", href: "/", icon: Home },
     { name: "Explore", href: "/explore", icon: Compass },
     { name: "Subscriptions", href: "/feed", icon: Users, requireAuth: true },
+    // ✅ Added the Community link here!
+    { name: "Community", href: "/tweets", icon: MessageSquare, requireAuth: true }, 
   ];
 
   const libraryLinks = [

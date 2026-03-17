@@ -1,127 +1,104 @@
 "use client";
 
-import Link from "next/link";
-import { useSelector } from "react-redux";
 import { formatTimeAgo } from "@/lib/formatters";
-import { ThumbsUp, MessageSquare, Trash2, MoreVertical } from "lucide-react";
+import { MessageSquare, ThumbsUp, MoreVertical } from "lucide-react";
 import { Button } from "../ui/Button";
-import { useDeleteTweetMutation } from "@/store/services/tweetApi";
-import { useToggleLikeMutation, useCheckIsLikedQuery } from "@/store/services/likeApi";
+import { useToggleLikeMutation } from "@/store/services/likeApi";
 import { toast } from "sonner";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/DropdownMenu";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useMemo } from "react";
+import { useSelector } from "react-redux";
 
 export function TweetCard({ tweet }) {
   const { user } = useSelector((state) => state.auth);
-  const [deleteTweet, { isLoading: isDeleting }] = useDeleteTweetMutation();
-  const [toggleLike, { isLoading: liking }] = useToggleLikeMutation();
-  const requireAuth = useRequireAuth();
-
-  const likeArgs = useMemo(
-    () => ({ contentId: tweet._id, contentType: "tweet" }),
-    [tweet._id]
-  );
-  const { data: likeStatus, refetch: refetchLike } = useCheckIsLikedQuery(
-    likeArgs,
-    { skip: !user }
-  );
-  const isLiked = likeStatus?.data?.isLiked;
-
-  const isOwner = user?._id === tweet?.user?._id;
-
-  const handleDelete = requireAuth(async () => {
-    if (!window.confirm("Delete this tweet?")) return;
+  const [toggleLike] = useToggleLikeMutation();
+  
+  // Handling backend populate behavior. Fallbacks in case the backend returns nested objects.
+  const owner = tweet?.user || {}; 
+  const isLiked = tweet.isLiked || false;
+  console.log(owner)
+  const handleLike = async () => {
+    if (!user) return toast.error("Please log in to like this tweet");
     try {
-      await deleteTweet(tweet._id).unwrap();
-      toast.success("Tweet deleted");
+      await toggleLike({ contentId: tweet._id, contentType: 'tweet' }).unwrap();
     } catch (err) {
-      toast.error("Failed to delete tweet");
+      toast.error("Failed to like tweet");
     }
-  });
-
-  const handleLike = requireAuth(async () => {
-    try {
-      await toggleLike({ contentId: tweet._id, contentType: "tweet" }).unwrap();
-      refetchLike();
-    } catch (err) {
-      toast.error("Failed to toggle like");
-    }
-  });
+  };
 
   return (
-    <div className="flex gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-      <Link href={`/channel/${tweet.user?.username}`} className="shrink-0">
-        <div className="h-10 w-10 overflow-hidden rounded-full bg-[var(--surface-raised)]">
-          <img
-            src={tweet.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${tweet.user?.username}`}
-            alt={tweet.user?.username}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      </Link>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:bg-[var(--surface-raised)]/30 sm:p-5">
+      <div className="flex items-start gap-3 sm:gap-4">
+        
+        <img
+          src={owner.avatar || "https://via.placeholder.com/150"}
+          alt={owner.username}
+          className="h-10 w-10 shrink-0 cursor-pointer rounded-full object-cover hover:opacity-80 sm:h-12 sm:w-12"
+        />
 
-      <div className="flex flex-1 flex-col gap-2">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/channel/${tweet.user?.username}`}>
-              <span className="font-semibold text-[var(--text-primary)] hover:underline">
-                {tweet.user?.fullname || tweet.user?.username}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <span className="font-bold text-[var(--text-primary)] hover:underline cursor-pointer">
+                {owner.fullname || owner.username || "User"}
               </span>
-            </Link>
-            <span className="text-sm text-[var(--text-muted)]">@{tweet.user?.username}</span>
-            <span className="text-sm text-[var(--text-muted)]">·</span>
-            <span className="text-sm text-[var(--text-muted)]">{formatTimeAgo(tweet.createdAt)}</span>
+              <span className="text-sm text-[var(--text-muted)] hidden sm:inline">
+                @{owner.username}
+              </span>
+              <span className="text-sm text-[var(--text-muted)]">•</span>
+              <span className="text-sm text-[var(--text-muted)]">
+                {formatTimeAgo(tweet.createdAt)}
+              </span>
+            </div>
+            <button className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+              <MoreVertical className="h-5 w-5" />
+            </button>
           </div>
 
-          {isOwner && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-[var(--text-muted)]">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="text-red-500 focus:text-red-500"
+          <div className="mt-1 whitespace-pre-wrap text-[15px] text-[var(--text-primary)] leading-relaxed">
+            {tweet.content}
+          </div>
+
+          {tweet.media && tweet.media.length > 0 && (
+            <div className={`mt-3 grid gap-1 overflow-hidden rounded-xl border border-[var(--border)]
+              ${tweet.media.length === 1 ? 'grid-cols-1' : ''}
+              ${tweet.media.length === 2 ? 'grid-cols-2 aspect-[2/1]' : ''}
+              ${tweet.media.length === 3 ? 'grid-cols-2 aspect-[2/1]' : ''}
+              ${tweet.media.length >= 4 ? 'grid-cols-2 aspect-square' : ''}
+            `}>
+              {tweet.media.map((mediaItem, index) => (
+                <div 
+                  key={mediaItem._id || index} 
+                  className={`relative w-full h-full bg-[var(--surface-raised)] flex justify-center
+                    ${tweet.media.length === 3 && index === 0 ? 'row-span-2' : ''}
+                  `}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>{isDeleting ? "Deleting..." : "Delete"}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <img 
+                    src={mediaItem.url} 
+                    alt={`Tweet Media ${index + 1}`} 
+                    className={`w-full h-full object-cover ${tweet.media.length === 1 ? 'max-h-96 object-contain bg-black/5' : ''}`}
+                  />
+                </div>
+              ))}
+            </div>
           )}
-        </div>
 
-        <p className="whitespace-pre-wrap text-[var(--text-primary)]">{tweet.content}</p>
+          <div className="mt-3 flex items-center gap-6">
+            <button 
+              onClick={handleLike}
+              className={`flex items-center gap-2 text-sm transition-colors hover:text-blue-500 ${isLiked ? 'text-blue-500' : 'text-[var(--text-muted)]'}`}
+            >
+              <div className="rounded-full p-2 hover:bg-blue-500/10">
+                <ThumbsUp className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+              </div>
+              <span className="font-medium">{tweet.likesCount || 0}</span>
+            </button>
 
-        <div className="mt-2 flex items-center gap-4">
-          {/* Like button — wired up */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLike}
-            disabled={liking}
-            className={`h-8 px-2 transition-colors ${
-              isLiked
-                ? "text-blue-500 hover:text-blue-600"
-                : "text-[var(--text-muted)] hover:text-blue-500"
-            }`}
-          >
-            <ThumbsUp className={`mr-2 h-4 w-4 ${isLiked ? "fill-current" : ""}`} />
-            <span className="text-xs">{tweet.likesCount || 0}</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-[var(--text-muted)] hover:text-green-500"
-          >
-            <MessageSquare className="mr-2 h-4 w-4" />
-            <span className="text-xs">Reply</span>
-          </Button>
+            <button className="flex items-center gap-2 text-sm text-[var(--text-muted)] transition-colors hover:text-green-500">
+              <div className="rounded-full p-2 hover:bg-green-500/10">
+                <MessageSquare className="h-4 w-4" />
+              </div>
+              <span className="font-medium">{tweet.commentsCount || 0}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

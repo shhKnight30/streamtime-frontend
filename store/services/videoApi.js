@@ -37,10 +37,10 @@ export const videoApi = baseApi.injectEndpoints({
             invalidatesTags: ['Video'],
         }),
         updateVideo: builder.mutation({
-            query: ({ videoId, ...data }) => ({
-                url: `/video/${videoId}`, // or `/videos/${videoId}` depending on your axiosBaseQuery mapping
+            query: ({ videoId, formData}) => ({
+                url: `/videos/${videoId}`, // or `/videos/${videoId}` depending on your axiosBaseQuery mapping
                 method: 'PATCH',
-                data, // e.g., { title: "New Title", description: "...", visibility: "public" }
+                data:formData, // e.g., { title: "New Title", description: "...", visibility: "public" }
             }),
             invalidatesTags: (result, error, { videoId }) => [
                 { type: 'Video', id: videoId },

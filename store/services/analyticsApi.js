@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const analyticsApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
         
         getUserAnalytics: builder.query({

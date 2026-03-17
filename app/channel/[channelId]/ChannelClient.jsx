@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { useGetUserVideosQuery } from "@/store/services/userApi";
 import { VideoCard } from "@/components/video/VideoCard";
 
 export function ChannelClient({ channelId }) {
@@ -20,8 +21,11 @@ export function ChannelClient({ channelId }) {
     // but the Video documents have ownerUsername as a flat field
     // We'll filter client-side after getting all videos, OR add a backend query param
     // For now: pass ownerUsername to searchVideos
-    const { data: videosData, isLoading: videosLoading } = useGetAllVideosQuery({});
-
+    const { data: videosData ,isLoading: videosLoading} = useGetUserVideosQuery(
+        { ownerUsername: channelId }, // channelId is actually username
+        { skip: !channelId }
+      );
+    const videos = videosData?.data?.videos || [];
     const channel = profileData?.data;
 
     // Only check subscription if we have the channel's _id
@@ -34,8 +38,7 @@ export function ChannelClient({ channelId }) {
     const [unsubscribe, { isLoading: unsubscribing }] = useUnsubscribeFromChannelMutation();
 
     // Filter videos belonging to this channel
-    const allVideos = videosData?.data?.videos || [];
-    const videos = allVideos.filter(v => v.ownerUsername === channel?.username);
+    // const videos = allVideos.filter(v => v.ownerUsername === channel?.username);
 
     const handleSubscribeToggle = async () => {
         if (!currentUser) {

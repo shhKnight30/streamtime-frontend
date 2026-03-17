@@ -45,11 +45,12 @@ export function VideoTable({ videos }) {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      await updateVideo({
-        videoId: editingVideo._id,
-        ...editForm,
-      }).unwrap();
-      
+      const formData = new FormData();
+      formData.append('title', editForm.title);
+      formData.append('description', editForm.description);
+      formData.append('isPublished', editForm.isPublished);
+      await updateVideo({ videoId: editingVideo._id, formData }).unwrap();
+            
       toast.success("Video updated successfully");
       setEditingVideo(null); // Close modal
     } catch (err) {
