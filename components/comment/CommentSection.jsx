@@ -14,16 +14,16 @@ const commentSchema = z.object({
   content: z.string().min(1, "Comment cannot be empty").max(500, "Comment is too long"),
 });
 
-export function CommentSection({ videoId }) {
+// ✅ Now perfectly dynamic for both Videos and Tweets
+export function CommentSection({ contentId, contentType = "Video" }) {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   const { data, isLoading, isError } = useGetCommentsQuery({
-    parentContentType: 'video',
-    parentContentId: videoId,
+    parentContentType: contentType,
+    parentContentId: contentId,
   });
   const [postComment, { isLoading: isPosting }] = useAddCommentMutation();
 
-  // ← backend returns { comments: [], pagination: {} }
   const comments = data?.data?.comments || [];
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
@@ -34,8 +34,8 @@ export function CommentSection({ videoId }) {
     try {
       await postComment({
         content: formData.content,
-        parentContentType: 'video',
-        parentContentId: videoId,
+        parentContentType: contentType, // Sends 'tweet' or 'video'
+        parentContentId: contentId,     // Sends the proper ID
       }).unwrap();
       reset();
       toast.success("Comment added!");
@@ -85,28 +85,11 @@ export function CommentSection({ videoId }) {
       {/* List */}
       <div className="flex flex-col gap-6">
         {isLoading && [...Array(3)].map((_, i) => (
-          <div key={i} className="flex gap-4">
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <div className="flex flex-col gap-2 flex-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          </div>
+          <div key={i} className="flex gap-4"><Skeleton className="h-9 w-9 rounded-full" /><div className="flex flex-col gap-2 flex-1"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-full" /></div></div>
         ))}
-
-        {isError && (
-          <p className="text-sm text-red-500">Failed to load comments.</p>
-        )}
-
-        {!isLoading && !isError && comments.map((comment) => (
-          <CommentItem key={comment._id} comment={comment} />
-        ))}
-
-        {!isLoading && !isError && comments.length === 0 && (
-          <p className="text-sm text-[var(--text-muted)] text-center py-4">
-            No comments yet. Be the first!
-          </p>
-        )}
+        {isError && <p className="text-sm text-red-500">Failed to load comments.</p>}
+        {!isLoading && !isError && comments.map((comment) => <CommentItem key={comment._id} comment={comment} />)}
+        {!isLoading && !isError && comments.length === 0 && <p className="text-sm text-[var(--text-muted)] text-center py-4">No comments yet. Be the first!</p>}
       </div>
     </div>
   );

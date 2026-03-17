@@ -5,7 +5,8 @@ import { Eye, Users, Video, ThumbsUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { VideoTable } from "@/components/dashboard/VideoTable";
-import { SubscribersList } from "@/components/dashboard/SubscribersList";
+// import { SubscribersList } from "@/components/dashboard/SubscribersList";
+import { NetworkManager } from "@/components/dashboard/NetworkManager";
 export default function DashboardPage() {
   const { data: statsData, isLoading: statsLoading } = useGetDashboardStatsQuery();
   const { data: videosData, isLoading: videosLoading } = useGetDashboardVideosQuery();
@@ -18,7 +19,7 @@ export default function DashboardPage() {
   };
   
   const videos = videosData?.data?.videos || [];
-
+  console.log(videos)
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
@@ -98,7 +99,7 @@ export default function DashboardPage() {
       </div>
       {/* ✅ The new SubscribersList section */}
         <div className="space-y-4">
-          <SubscribersList />
+          <NetworkManager/>
         </div>
     </div>
   );

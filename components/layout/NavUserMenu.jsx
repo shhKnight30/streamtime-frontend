@@ -1,175 +1,101 @@
-import Link from "next/link";
-import { useDispatch, useSelector } from "react-redux";
-import { useTheme } from "next-themes";
-import { User, BarChart, Settings, LogOut, Moon, Sun } from "lucide-react";
-import { logoutUser } from "@/store/slices/authSlice";
-import { useLogoutMutation } from "@/store/services/authApi";
+"use client";
+
+import { useSelector, useDispatch } from "react-redux";
+import { logoutUser  } from "@/store/slices/authSlice";
+import { useRouter } from "next/navigation";
 import {
-
   DropdownMenu,
-
   DropdownMenuContent,
-
   DropdownMenuItem,
-
   DropdownMenuLabel,
-
   DropdownMenuSeparator,
-
   DropdownMenuTrigger,
-
 } from "../ui/DropdownMenu";
-
-
+import { User, LogOut, LayoutDashboard, Settings, Clock, PlaySquare, Compass, HelpCircle } from "lucide-react";
+import Link from "next/link";
 
 export function NavUserMenu() {
-
+  const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const router = useRouter();
 
-  const { theme, setTheme } = useTheme();
+  if (!user) return null;
 
-  const { user, isCreator } = useSelector((state) => state.auth);
-  const [logout] = useLogoutMutation();
-
-
-  const handleLogout = async () => {
-        try {
-            await logout().unwrap();  // ← call backend to invalidate refresh token
-        } catch (e) {
-            // Even if the API call fails, clear local state
-        }
-        document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        dispatch(logoutUser());
-        window.location.href = "/login";
-    };
-
-
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push("/login");
+  };
 
   return (
-
     <DropdownMenu>
-
-      <DropdownMenuTrigger className="focus:outline-none">
-
-        <div className="h-8 w-8 overflow-hidden rounded-full bg-[var(--surface-raised)] border border-[var(--border)] transition-opacity hover:opacity-80">
-
-          <img
-
-            src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'fallback'}`}
-
-            alt={user?.username || "User avatar"}
-
-            className="h-full w-full object-cover"
-
-          />
-
-        </div>
-
+      <DropdownMenuTrigger asChild>
+        <button className="relative h-8 w-8 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-raised)] transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--text-primary)] focus:ring-offset-2 focus:ring-offset-[var(--background)]">
+          <img src={user.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"} alt={user.username} className="h-full w-full object-cover" />
+        </button>
       </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-60">
-
-        <div className="flex items-center gap-2 p-2">
-
-          <div className="h-10 w-10 overflow-hidden rounded-full bg-[var(--surface-raised)]">
-
-            <img
-
-              src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'fallback'}`}
-
-              alt="Avatar"
-
-              className="h-full w-full object-cover"
-
-            />
-
+      
+      <DropdownMenuContent align="end" className="w-64 p-2 rounded-xl shadow-lg border-[var(--border)] bg-[var(--surface)]">
+        <DropdownMenuLabel className="font-normal p-2">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-bold leading-none text-[var(--text-primary)]">{user.fullname}</p>
+            <p className="text-xs leading-none text-[var(--text-muted)]">@{user.username}</p>
           </div>
-
-          <div className="flex flex-col space-y-0.5 overflow-hidden">
-
-            <p className="text-sm font-medium truncate">{user?.fullname || user?.username}</p>
-
-            <p className="text-xs text-[var(--text-muted)] truncate">{user?.email}</p>
-
-          </div>
-
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={`/channel/${user?.username}`}>
-            <User className="mr-2 h-4 w-4" />
-
-            <span>Your Channel</span>
-
+        </DropdownMenuLabel>
+        
+        <DropdownMenuSeparator className="bg-[var(--border)]" />
+        
+        {/* Creator Hub Section */}
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href={`/channel/${user.username}`} className="flex w-full items-center">
+            <User className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Your Channel
           </Link>
-
         </DropdownMenuItem>
-
-
-
-        {isCreator && (
-
-          <DropdownMenuItem asChild>
-
-            <Link href="/dashboard">
-
-              <BarChart className="mr-2 h-4 w-4" />
-
-              <span>Dashboard</span>
-
-            </Link>
-
-          </DropdownMenuItem>
-
-        )}
-
-
-
-        <DropdownMenuItem asChild>
-
-          <Link href="/settings">
-
-            <Settings className="mr-2 h-4 w-4" />
-
-            <span>Edit Profile</span>
-
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/dashboard" className="flex w-full items-center">
+            <LayoutDashboard className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Creator Dashboard
           </Link>
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator className="bg-[var(--border)]" />
 
+        {/* Content & Discovery Section */}
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/explore" className="flex w-full items-center">
+            <Compass className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Explore
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/activity" className="flex w-full items-center">
+            {/* Using Activity as the hub for both History and Liked Videos */}
+            <Clock className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Activity & Liked
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/playlists" className="flex w-full items-center">
+            <PlaySquare className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Playlists
+          </Link>
         </DropdownMenuItem>
 
+        <DropdownMenuSeparator className="bg-[var(--border)]" />
 
-
-        <DropdownMenuSeparator />
-
-
-
-        <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-
-          {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-
-          <span>Toggle Theme</span>
-
+        {/* System Section */}
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/settings" className="flex w-full items-center">
+            <Settings className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Settings
+          </Link>
         </DropdownMenuItem>
-
-
-
-        <DropdownMenuSeparator />
-
-
-
-        <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
-
-          <LogOut className="mr-2 h-4 w-4" />
-
-          <span>Logout</span>
-
+        <DropdownMenuItem asChild className="cursor-pointer p-2 rounded-md hover:bg-[var(--surface-raised)] focus:bg-[var(--surface-raised)]">
+          <Link href="/help" className="flex w-full items-center">
+            <HelpCircle className="mr-3 h-4 w-4 text-[var(--text-muted)]" /> Help
+          </Link>
         </DropdownMenuItem>
-
+        
+        <DropdownMenuSeparator className="bg-[var(--border)]" />
+        
+        <DropdownMenuItem className="cursor-pointer p-2 rounded-md text-red-500 hover:bg-red-500/10 focus:bg-red-500/10 focus:text-red-500" onClick={handleLogout}>
+          <LogOut className="mr-3 h-4 w-4" /> Log out
+        </DropdownMenuItem>
       </DropdownMenuContent>
-
     </DropdownMenu>
-
   );
-
 }

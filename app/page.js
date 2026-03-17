@@ -1,19 +1,67 @@
 "use client";
 
+import { useState } from "react";
 import { useGetAllVideosQuery } from "@/store/services/videoApi";
 import { VideoCard } from "@/components/video/VideoCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useSelector } from "react-redux";
+import { Globe, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
-  // Pass any params if needed, like { page: 1, limit: 12 }
-  const { data, isLoading, isError } = useGetAllVideosQuery({});
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  
+  // Toggle State: "global" | "subscribed"
+  const [feedType, setFeedType] = useState("global");
 
-  // Backend returns: { data: { videos: [...], pagination: {...} } }
+  // We pass the feed parameter to the query. 
+  const { data, isLoading, isError } = useGetAllVideosQuery({
+    ...(feedType === "subscribed" && { feed: "subscribed" })
+  });
+
   const videos = data?.data?.videos || [];
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <h1 className="mb-6 text-xl font-bold tracking-tight">Recommended for you</h1>
+      
+      {/* ✅ THE SECONDARY HEADLINE TOGGLE */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[var(--border)] pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            {feedType === "global" ? "Recommended for you" : "Your Subscriptions"}
+          </h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            {feedType === "global" ? "Discover new content" : "Latest videos from channels you follow"}
+          </p>
+        </div>
+
+        {isAuthenticated && (
+          <div className="flex items-center rounded-lg bg-[var(--surface-raised)] p-1 border border-[var(--border)]">
+            <button
+              onClick={() => setFeedType("global")}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors",
+                feedType === "global" 
+                  ? "bg-[var(--background)] text-[var(--text-primary)] shadow-sm border border-[var(--border)]" 
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              <Globe className="h-4 w-4" /> Global
+            </button>
+            <button
+              onClick={() => setFeedType("subscribed")}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors",
+                feedType === "subscribed" 
+                  ? "bg-[var(--background)] text-[var(--text-primary)] shadow-sm border border-[var(--border)]" 
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              <Users className="h-4 w-4" /> Following
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Loading State */}
       {isLoading && (
@@ -51,8 +99,12 @@ export default function Home() {
 
       {/* Empty State */}
       {!isLoading && !isError && videos.length === 0 && (
-        <div className="flex h-64 flex-col items-center justify-center text-[var(--text-muted)]">
-          <p>No videos found. Be the first to upload!</p>
+        <div className="flex h-64 flex-col items-center justify-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl bg-[var(--surface)]">
+          <Users className="h-12 w-12 opacity-20 mb-4" />
+          <p className="font-semibold text-lg">No videos found.</p>
+          <p className="text-sm">
+            {feedType === "subscribed" ? "The channels you follow haven't posted anything yet." : "Be the first to upload!"}
+          </p>
         </div>
       )}
     </div>
