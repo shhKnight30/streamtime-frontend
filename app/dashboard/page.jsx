@@ -17,7 +17,8 @@ export default function DashboardPage() {
     totalLikes: 0,
   };
   
-  const videos = videosData?.data || [];
+  const videos = videosData?.data?.videos || [];
+
 
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
@@ -92,8 +93,13 @@ export default function DashboardPage() {
           <Skeleton className="h-64 w-full rounded-xl" />
         ) : (
           <VideoTable videos={videos} />
+          
         )}
       </div>
+      {/* ✅ The new SubscribersList section */}
+        <div className="space-y-4">
+          <SubscribersList />
+        </div>
     </div>
   );
 }

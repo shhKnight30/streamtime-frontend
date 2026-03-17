@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const videoApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         getAllVideos: builder.query({
@@ -12,7 +13,7 @@ export const videoApi = baseApi.injectEndpoints({
             }),
             keepUnusedDataFor: 60,
             providesTags: ['Video'],
-        }),
+        }), 
 
         // ← Separate search endpoint that uses the correct `q` param
         searchVideos: builder.query({
@@ -35,6 +36,17 @@ export const videoApi = baseApi.injectEndpoints({
             }),
             invalidatesTags: ['Video'],
         }),
+        updateVideo: builder.mutation({
+            query: ({ videoId, ...data }) => ({
+                url: `/video/${videoId}`, // or `/videos/${videoId}` depending on your axiosBaseQuery mapping
+                method: 'PATCH',
+                data, // e.g., { title: "New Title", description: "...", visibility: "public" }
+            }),
+            invalidatesTags: (result, error, { videoId }) => [
+                { type: 'Video', id: videoId },
+                'Video'
+            ],
+        }),
     }),
 });
 
@@ -43,4 +55,5 @@ export const {
     useSearchVideosQuery,
     useGetVideoByIdQuery,
     useUploadVideoMutation,
+    useUpdateVideoMutation,
 } = videoApi;

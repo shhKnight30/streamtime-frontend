@@ -8,18 +8,21 @@ import { VideoPlayer } from "@/components/video/VideoPlayer";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { formatTimeAgo, formatViews } from "@/lib/formatters";
-import { ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, BookmarkPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useRequireAuth } from "@/hooks/useRequireAuth.js";
 import { useMemo } from "react";
+import { CommentSection } from "@/components/comment/CommentSection";
+import { useState } from "react";
+import ViewTracker from "@/components/video/ViewTracker";
 export function WatchVideoClient({ videoId }) {
-  const { requireAuth } = useRequireAuth();
+  const requireAuth = useRequireAuth();
   const { data, isLoading, isError } = useGetVideoByIdQuery(videoId);
   const { user } = useSelector((state) => state.auth);
-
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   // ✅ correct data shape — backend wraps in { data: { ...video } }
   const video = data?.data;
-  console.log(video)
+  // console.log(video)
   const secureVideoURL = video?.videoURL
   const secureThumbnail = video?.thumbnail
   // console.log(secureVideoURL)
@@ -146,6 +149,14 @@ export function WatchVideoClient({ videoId }) {
             <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
+          <Button
+            variant="ghost"
+            className="rounded-full bg-[var(--surface-raised)] px-4 hover:bg-[var(--surface)]"
+            onClick={requireAuth(() => setShowPlaylistModal(true))}
+          >
+            <BookmarkPlus className="mr-2 h-4 w-4" />
+            Save
+          </Button>
         </div>
       </div>
 
@@ -155,6 +166,14 @@ export function WatchVideoClient({ videoId }) {
         </div>
         <p className="whitespace-pre-wrap">{video.description}</p>
       </div>
+      <CommentSection videoId={videoId} />
+      {showPlaylistModal && (
+        <AddToPlaylistModal
+          videoId={videoId}
+          onClose={() => setShowPlaylistModal(false)}
+        />
+      )}
+      <ViewTracker videoId={videoId} />
     </div>
   );
 }

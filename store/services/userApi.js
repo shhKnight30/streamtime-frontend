@@ -9,16 +9,14 @@ export const userApi = baseApi.injectEndpoints({
             providesTags: ['User'],
         }),
 
-        // ← Now takes username string, not _id
         getChannelProfile: builder.query({
             query: (username) => ({
-                url: `/users/channel/${username}`,  // ← was /users/c/${channelId}
+                url: `/users/channel/${username}`,
                 method: 'GET',
             }),
             providesTags: (result, error, username) => [{ type: 'User', id: username }],
         }),
 
-        // ← For channel page: get videos by owner
         getUserVideos: builder.query({
             query: (params) => ({
                 url: '/videos/user',
@@ -30,7 +28,7 @@ export const userApi = baseApi.injectEndpoints({
 
         updateAccountDetails: builder.mutation({
             query: (data) => ({
-                url: '/users/update-profile',  // ← was /users/update-account
+                url: '/users/update-profile',
                 method: 'PATCH',
                 data,
             }),
@@ -46,11 +44,30 @@ export const userApi = baseApi.injectEndpoints({
             invalidatesTags: ['User'],
         }),
 
+        // ✅ ADDED: Update cover image mutation
+        updateCoverImage: builder.mutation({
+            query: (formData) => ({
+                url: '/users/cover-image',
+                method: 'PATCH',
+                data: formData, // Sends as multipart/form-data
+            }),
+            invalidatesTags: ['User'],
+        }),
+
         changePassword: builder.mutation({
             query: (data) => ({
                 url: '/users/change-password',
                 method: 'POST',
                 data,
+            }),
+        }),
+
+        // ✅ ADDED: Refresh token mutation (useful if you don't handle it strictly inside axios interceptors)
+        refreshToken: builder.mutation({
+            query: (data) => ({
+                url: '/users/refresh-token',
+                method: 'POST',
+                data, // Optional payload (e.g. { refreshToken: "..." }) if not using cookies
             }),
         }),
     }),
@@ -62,5 +79,7 @@ export const {
     useGetUserVideosQuery,
     useUpdateAccountDetailsMutation,
     useUpdateAvatarMutation,
+    useUpdateCoverImageMutation, // ✅ Exported new hook
     useChangePasswordMutation,
+    useRefreshTokenMutation,     // ✅ Exported new hook
 } = userApi;

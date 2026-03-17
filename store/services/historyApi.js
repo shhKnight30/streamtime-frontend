@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const historyApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         getWatchHistory: builder.query({

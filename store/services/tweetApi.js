@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const tweetApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         getTweets: builder.query({

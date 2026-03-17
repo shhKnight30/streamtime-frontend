@@ -97,7 +97,7 @@ export function NavUserMenu() {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={`/channel/${user?._id}`}>
+          <Link href={`/channel/${user?.username}`}>
             <User className="mr-2 h-4 w-4" />
 
             <span>Your Channel</span>
@@ -128,7 +128,7 @@ export function NavUserMenu() {
 
         <DropdownMenuItem asChild>
 
-          <Link href="/channel/edit">
+          <Link href="/settings">
 
             <Settings className="mr-2 h-4 w-4" />
 

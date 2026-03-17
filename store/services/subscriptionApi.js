@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const subscriptionApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         subscribeToChannel: builder.mutation({
@@ -46,6 +47,15 @@ export const subscriptionApi = baseApi.injectEndpoints({
             }),
             providesTags: ['Subscription'],
         }),
+        getChannelSubscribers: builder.query({
+            query: (channelId) => ({
+                url: `/subscriptions/channel/${channelId}/subscribers`,
+                method: 'GET',
+            }),
+            providesTags: (result, error, channelId) => [
+                { type: 'Subscription', id: `subscribers_${channelId}` }
+            ],
+        }),
     }),
 });
 
@@ -54,4 +64,5 @@ export const {
     useUnsubscribeFromChannelMutation,
     useCheckSubscriptionStatusQuery,
     useGetUserSubscriptionsQuery,
+    useGetChannelSubscribersQuery
 } = subscriptionApi;

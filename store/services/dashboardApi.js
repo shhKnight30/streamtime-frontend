@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const dashboardApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         getDashboardStats: builder.query({

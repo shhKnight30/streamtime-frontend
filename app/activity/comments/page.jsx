@@ -8,7 +8,9 @@ import { formatTimeAgo } from "@/lib/formatters";
 
 export default function CommentsHistoryPage() {
   const { data, isLoading, isError } = useGetUserCommentsQuery();
-  const comments = data?.data || [];
+
+  // ← Backend returns { data: { comments: [], pagination: {} } } not { data: [] }
+  const comments = data?.data?.comments || [];
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
@@ -16,7 +18,9 @@ export default function CommentsHistoryPage() {
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <MessageSquare className="h-6 w-6" /> Your Comments
         </h1>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">A history of comments you have posted across StreamTime.</p>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
+          A history of comments you have posted across StreamTime.
+        </p>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -31,20 +35,39 @@ export default function CommentsHistoryPage() {
         )}
 
         {!isLoading && !isError && comments.length > 0 && comments.map((comment) => (
-          <div key={comment._id} className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-5 transition-colors hover:bg-[var(--surface)]">
+          <div
+            key={comment._id}
+            className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-5 transition-colors hover:bg-[var(--surface)]"
+          >
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-              <span className="text-xs font-medium text-[var(--text-muted)]">
-                {formatTimeAgo(comment.createdAt)}
-              </span>
-              {comment.video && (
-                <Link 
-                  href={`/watch/${comment.video._id}`} 
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                {/* ← Show what content type this comment is on */}
+                <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 capitalize">
+                  {comment.parentContentType}
+                </span>
+                <span>{formatTimeAgo(comment.createdAt)}</span>
+              </div>
+
+              {/* ← was comment.video (doesn't exist) — use parentContentType check instead */}
+              {comment.parentContentType === 'video' && comment.parentContentId && (
+                <Link
+                  href={`/watch/${comment.parentContentId}`}
                   className="flex items-center gap-1 text-xs font-medium text-blue-500 hover:text-blue-600 hover:underline"
                 >
                   Go to video <ExternalLink className="h-3 w-3" />
                 </Link>
               )}
+
+              {comment.parentContentType === 'tweet' && comment.parentContentId && (
+                <Link
+                  href={`/tweets`}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-500 hover:text-blue-600 hover:underline"
+                >
+                  Go to tweet <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
             </div>
+
             <p className="whitespace-pre-wrap text-sm text-[var(--text-primary)]">
               {comment.content}
             </p>

@@ -1,73 +1,37 @@
 "use client";
 
-
-
 import { useState, useEffect } from "react";
-
 import { useSelector, useDispatch } from "react-redux";
-
 import { useForm } from "react-hook-form";
-
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import * as z from "zod";
-
 import { toast } from "sonner";
-
 import { Camera, Save, Lock, User as UserIcon } from "lucide-react";
-
-
-
-import { 
-
-  useUpdateAccountDetailsMutation, 
-
-  useUpdateAvatarMutation, 
-
-  useChangePasswordMutation 
-
+import {
+  useUpdateAccountDetailsMutation,
+  useUpdateAvatarMutation,
+  useChangePasswordMutation
 } from "@/store/services/userApi";
-
 import { setCredentials } from "@/store/slices/authSlice";
-
-
-
 import { Button } from "@/components/ui/Button";
-
 import { Input } from "@/components/ui/Input";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 
-
-
-// Validation Schemas
-
 const profileSchema = z.object({
-
   fullName: z.string().min(2, "Full name must be at least 2 characters").max(50, "Name is too long"),
-
   email: z.string().email("Invalid email address"),
-
 });
 
 
 
 const passwordSchema = z.object({
-
   oldPassword: z.string().min(6, "Current password is required"),
-
   newPassword: z.string().min(6, "New password must be at least 6 characters"),
-
   confirmPassword: z.string().min(6, "Please confirm your new password"),
-
 }).refine((data) => data.newPassword === data.confirmPassword, {
-
   message: "Passwords do not match",
-
   path: ["confirmPassword"],
-
 });
 
 
@@ -78,7 +42,7 @@ export default function SettingsPage() {
 
   const { user, accessToken } = useSelector((state) => state.auth);
 
-  
+
 
   const [updateAccount, { isLoading: isUpdatingProfile }] = useUpdateAccountDetailsMutation();
 
@@ -96,15 +60,15 @@ export default function SettingsPage() {
 
   // Profile Form Setup
 
-  const { 
+  const {
 
-    register: registerProfile, 
+    register: registerProfile,
 
-    handleSubmit: handleSubmitProfile, 
+    handleSubmit: handleSubmitProfile,
 
     reset: resetProfile,
 
-    formState: { errors: profileErrors } 
+    formState: { errors: profileErrors }
 
   } = useForm({
 
@@ -124,15 +88,15 @@ export default function SettingsPage() {
 
   // Password Form Setup
 
-  const { 
+  const {
 
-    register: registerPassword, 
+    register: registerPassword,
 
-    handleSubmit: handleSubmitPassword, 
+    handleSubmit: handleSubmitPassword,
 
     reset: resetPassword,
 
-    formState: { errors: passwordErrors } 
+    formState: { errors: passwordErrors }
 
   } = useForm({
 
@@ -188,13 +152,13 @@ export default function SettingsPage() {
 
       if (response.data?.avatar) {
 
-         dispatch(setCredentials({ 
+        dispatch(setCredentials({
 
-           user: { ...user, avatar: response.data.avatar }, 
+          user: { ...user, avatar: response.data.avatar },
 
-           accessToken 
+          accessToken
 
-         }));
+        }));
 
       }
 
@@ -218,16 +182,18 @@ export default function SettingsPage() {
 
     try {
 
-      const response = await updateAccount(data).unwrap();
+      const response = await updateAccount({
+        fullname: data.fullName,
+        email: data.email
+      }).unwrap();
 
       // Update local Redux state so the Navbar and other components reflect the new name instantly
 
-      dispatch(setCredentials({ 
+      dispatch(setCredentials({
 
-        user: { ...user, fullname: data.fullName, email: data.email }, 
+        user: { ...user, fullname: data.fullName, email: data.email },
 
-        accessToken 
-
+        accessToken
       }));
 
       toast.success("Profile updated successfully");
@@ -246,15 +212,15 @@ export default function SettingsPage() {
 
     try {
 
-      await changePassword({ 
+      await changePassword({
 
-        oldPassword: data.oldPassword, 
+        oldPassword: data.oldPassword,
 
-        newPassword: data.newPassword 
+        newPassword: data.newPassword
 
       }).unwrap();
 
-      
+
 
       resetPassword();
 
@@ -330,11 +296,11 @@ export default function SettingsPage() {
 
               <div className="relative h-24 w-24 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-raised)] group cursor-pointer">
 
-                <img 
+                <img
 
-                  src={avatarPreview || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"} 
+                  src={avatarPreview || "https://api.dicebear.com/7.x/avataaars/svg?seed=fallback"}
 
-                  alt="Avatar preview" 
+                  alt="Avatar preview"
 
                   className="h-full w-full object-cover"
 
@@ -346,11 +312,11 @@ export default function SettingsPage() {
 
                 </div>
 
-                <input 
+                <input
 
-                  type="file" 
+                  type="file"
 
-                  accept="image/*" 
+                  accept="image/*"
 
                   onChange={handleAvatarChange}
 
@@ -396,9 +362,9 @@ export default function SettingsPage() {
 
                   <label className="text-sm font-medium">Full Name</label>
 
-                  <Input 
+                  <Input
 
-                    {...registerProfile("fullName")} 
+                    {...registerProfile("fullName")}
 
                     disabled={isUpdatingProfile}
 
@@ -416,9 +382,9 @@ export default function SettingsPage() {
 
                   <label className="text-sm font-medium">Email Address</label>
 
-                  <Input 
+                  <Input
 
-                    {...registerProfile("email")} 
+                    {...registerProfile("email")}
 
                     type="email"
 
@@ -474,11 +440,11 @@ export default function SettingsPage() {
 
                   <label className="text-sm font-medium">Current Password</label>
 
-                  <Input 
+                  <Input
 
                     type="password"
 
-                    {...registerPassword("oldPassword")} 
+                    {...registerPassword("oldPassword")}
 
                     disabled={isChangingPassword}
 
@@ -496,11 +462,11 @@ export default function SettingsPage() {
 
                   <label className="text-sm font-medium">New Password</label>
 
-                  <Input 
+                  <Input
 
                     type="password"
 
-                    {...registerPassword("newPassword")} 
+                    {...registerPassword("newPassword")}
 
                     disabled={isChangingPassword}
 
@@ -518,11 +484,11 @@ export default function SettingsPage() {
 
                   <label className="text-sm font-medium">Confirm New Password</label>
 
-                  <Input 
+                  <Input
 
                     type="password"
 
-                    {...registerPassword("confirmPassword")} 
+                    {...registerPassword("confirmPassword")}
 
                     disabled={isChangingPassword}
 

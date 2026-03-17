@@ -28,7 +28,7 @@ export default function PlaylistsPage() {
 });
   
   const [createPlaylist, { isLoading: isCreating }] = useCreatePlaylistMutation();
-  const playlists = data?.data || [];
+  const playlists = data?.data?.playlists || data?.data || [];
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(playlistSchema),

@@ -2,6 +2,7 @@
 import { baseApi } from './baseApi.js';
 
 export const likeApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         toggleLike: builder.mutation({

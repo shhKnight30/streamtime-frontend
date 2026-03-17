@@ -1,7 +1,9 @@
 // store/services/playlistApi.js
 import { baseApi } from './baseApi.js';
 
+
 export const playlistApi = baseApi.injectEndpoints({
+    overrideExisting: true,
     endpoints: (builder) => ({
 
         // ← Auth-based route, no userId in path

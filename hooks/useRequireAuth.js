@@ -6,14 +6,15 @@ export function useRequireAuth() {
     const { isAuthenticated } = useSelector((state) => state.auth);
     const router = useRouter();
 
-    const requireAuth = (callback) => {
+    // ← Returns a WRAPPER FUNCTION, does not call callback immediately
+    const requireAuth = (callback) => (...args) => {
         if (!isAuthenticated) {
             toast.error("Please log in to continue");
             router.push('/login');
             return;
         }
-        callback();
+        return callback(...args);  // ← passes form data through
     };
 
-    return { requireAuth, isAuthenticated };
+    return requireAuth;  // ← return the function directly, not an object
 }
