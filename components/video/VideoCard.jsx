@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { formatTimeAgo, formatViews } from "@/lib/formatters";
 
-export function VideoCard({ video }) {
+export function VideoCard({ video,isLive,className }) {
+  const href = isLive ? `/live/stream_${video._id}` : `/watch/${video._id}`;
   return (
     <div className="group flex flex-col gap-3">
-      <Link href={`/watch/${video._id}`} className="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--surface-raised)]">
+      <Link href={href} className="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--surface-raised)]">
         <img
           src={video.thumbnail}
           alt={video.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        {isLive && (
+          <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded bg-red-600 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+            Live
+          </div>
+        )}
         <div className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
           {video.duration != null && Number(video.duration) > 0
             ? (() => {

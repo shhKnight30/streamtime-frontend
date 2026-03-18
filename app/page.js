@@ -5,16 +5,19 @@ import { useGetAllVideosQuery } from "@/store/services/videoApi";
 import { VideoCard } from "@/components/video/VideoCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useSelector } from "react-redux";
-import { Globe, Users } from "lucide-react";
+import { Globe, Users, Radio } from "lucide-react"; // Added Radio icon
 import { cn } from "@/lib/utils";
+import { useGetLiveStreamsQuery } from "@/store/services/liveStreamApi";
 
 export default function Home() {
   const { isAuthenticated } = useSelector((state) => state.auth);
-  
-  // Toggle State: "global" | "subscribed"
   const [feedType, setFeedType] = useState("global");
 
-  // We pass the feed parameter to the query. 
+  // 1. Fetch Live Streams (Renamed loading state to avoid conflict)
+  const { data: liveData, isLoading: isLiveLoading } = useGetLiveStreamsQuery({ isLive: true });
+  const liveStreams = liveData?.data || [];
+
+  // 2. Fetch Regular Videos
   const { data, isLoading, isError } = useGetAllVideosQuery({
     ...(feedType === "subscribed" && { feed: "subscribed" })
   });
@@ -24,7 +27,36 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
       
-      {/* ✅ THE SECONDARY HEADLINE TOGGLE */}
+      {/* 🔴 LIVE NOW SECTION (Only shows if there are active streams) */}
+      {!isLiveLoading && liveStreams.length > 0 && (
+        <section className="mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+                <Radio className="h-5 w-5 animate-pulse" />
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+                Live Now
+              </h2>
+            </div>
+          </div>
+          
+          {/* Horizontal scroll for Live Streams */}
+          <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {liveStreams.map((stream) => (
+              <VideoCard 
+                key={stream._id} 
+                video={stream} 
+                isLive={true} 
+                className="border-2 border-red-500/20" 
+              />
+            ))}
+          </div>
+          <div className="mt-8 border-b border-[var(--border)]" />
+        </section>
+      )}
+
+      {/* ✅ FEED TOGGLE SECTION */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[var(--border)] pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
@@ -63,8 +95,8 @@ export default function Home() {
         )}
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
+      {/* Video Feed Loading/Error/Success states remain the same as your original */}
+      {isLoading ? (
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="flex flex-col gap-3">
@@ -79,26 +111,17 @@ export default function Home() {
             </div>
           ))}
         </div>
-      )}
-
-      {/* Error State */}
-      {isError && (
+      ) : isError ? (
         <div className="flex h-40 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500">
           <p>Failed to load videos. Please try again later.</p>
         </div>
-      )}
-
-      {/* Success State: Video Grid */}
-      {!isLoading && !isError && videos.length > 0 && (
+      ) : videos.length > 0 ? (
         <div className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {videos.map((video) => (
             <VideoCard key={video._id} video={video} />
           ))}
         </div>
-      )}
-
-      {/* Empty State */}
-      {!isLoading && !isError && videos.length === 0 && (
+      ) : (
         <div className="flex h-64 flex-col items-center justify-center text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl bg-[var(--surface)]">
           <Users className="h-12 w-12 opacity-20 mb-4" />
           <p className="font-semibold text-lg">No videos found.</p>

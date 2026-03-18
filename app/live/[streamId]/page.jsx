@@ -25,7 +25,10 @@ export default function LiveViewerPage() {
     if (!streamId) return;
 
     const initViewer = async () => {
-      if (!socket.connected) socket.connect();
+      if (!socket.connected) {
+    socket.connect();
+    await new Promise((resolve) => socket.once("connect", resolve));
+  }
 
       setStatus("Joining stream...");
       socket.emit("join-webrtc-stream", { streamId, userId: user?._id || "anonymous" });
@@ -77,49 +80,59 @@ export default function LiveViewerPage() {
 
       // 6. Consume the Tracks
       socket.once("producers-list", async ({ producers }) => {
-        if (producers.length === 0) {
-          setStatus("Waiting for creator to start video...");
-          return;
-        }
+  if (producers.length === 0) {
+    setStatus("Waiting for creator to start video...");
+    return;
+  }
 
-        const stream = new MediaStream(); // Create an empty stream
+  const stream = new MediaStream(); 
 
-        for (const producer of producers) {
-          // Tell backend we want to consume this specific track
-          socket.emit("consume", {
-            transportId: recvTransportRef.current.id,
-            producerId: producer.id,
-            rtpCapabilities: deviceRef.current.rtpCapabilities,
+  // ✅ FIX: Track which kinds (audio/video) we've already added
+  const consumedKinds = new Set();
+  const validProducers = producers.filter((producer) => {
+    if (consumedKinds.has(producer.kind)) return false; // Skip duplicates
+    consumedKinds.add(producer.kind);
+    return true;
+  });
+
+  // Loop through validProducers instead of the raw producers array
+  for (const producer of validProducers) {
+    socket.emit("consume", {
+      transportId: recvTransportRef.current.id,
+      producerId: producer.id,
+      rtpCapabilities: deviceRef.current.rtpCapabilities,
+    });
+
+    await new Promise((resolve) => {
+      const handleConsumerCreated = async ({ consumer }) => {
+        if (consumer.producerId !== producer.id) return; 
+
+        try {
+          const localConsumer = await recvTransportRef.current.consume({
+            id: consumer.id,
+            producerId: consumer.producerId,
+            kind: consumer.kind,
+            rtpParameters: consumer.rtpParameters,
           });
 
-          // Wait for backend to approve
-          await new Promise((resolve) => {
-            const handleConsumerCreated = async ({ consumer }) => {
-              if (consumer.producerId !== producer.id) return; 
-              
-              // Tell our local device to decode the track
-              const localConsumer = await recvTransportRef.current.consume({
-                id: consumer.id,
-                producerId: consumer.producerId,
-                kind: consumer.kind,
-                rtpParameters: consumer.rtpParameters,
-              });
-
-              // Add the decoded track to our media stream
-              stream.addTrack(localConsumer.track);
-              socket.off("consumer-created", handleConsumerCreated); // cleanup listener
-              resolve();
-            };
-            socket.on("consumer-created", handleConsumerCreated);
-          });
+          stream.addTrack(localConsumer.track);
+        } catch (error) {
+          console.error(`Failed to consume ${consumer.kind} track:`, error);
+        } finally {
+          socket.off("consumer-created", handleConsumerCreated); 
+          resolve();
         }
+      };
+      
+      socket.on("consumer-created", handleConsumerCreated);
+    });
+  }
 
-        // 7. Play the video!
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setStatus("Live");
-        }
-      });
+  if (videoRef.current) {
+    videoRef.current.srcObject = stream;
+    setStatus("Live");
+  }
+});
     };
 
     // --- Live Socket Listeners ---
