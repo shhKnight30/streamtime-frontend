@@ -21,10 +21,20 @@ export function NavUserMenu() {
 
   if (!user) return null;
 
-  const handleLogout = () => {
-    dispatch(logout());
+    const handleLogout = async () => {
+    try {
+        // Clear httpOnly cookies on the backend
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/logout`, { 
+            method: 'POST', 
+            credentials: 'include' 
+        });
+    } catch (_) { 
+        // Best-effort backend logout, proceed to clear local state anyway
+    }
+    
+    dispatch(logoutUser()); 
     router.push("/login");
-  };
+};
 
   return (
     <DropdownMenu>

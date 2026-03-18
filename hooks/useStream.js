@@ -34,7 +34,7 @@ export const useStream = (streamId, userId, streamTitle) => {
 
     const initializeSocket = useCallback(() => {
         // Replace with your backend URL
-        const socket = io('http://localhost:8000', {
+        const socket = io('http://localhost:4000', {
             withCredentials: true,
         });
 

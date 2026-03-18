@@ -43,12 +43,7 @@ export function CommentSection({ contentId, contentType = "Video" }) {
       toast.error(err?.data?.message || "Failed to post comment");
     }
   };
-  useEffect(() => {
-    socket.on('new-chat-message', (msg) => {
-        setMessages((prev) => [...prev, msg]);
-    });
-    return () => socket.off('new-chat-message');
-}, []);
+
 
   return (
     <div className="mt-6 flex flex-col gap-6 border-t border-[var(--border)] pt-6">

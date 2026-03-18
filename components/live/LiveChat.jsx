@@ -1,34 +1,46 @@
+"use client";
+
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { Send, Smile } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 
-export default function LiveChat({ streamId, currentUser }) {
+export default function LiveChat({ streamId, user }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    
     const socketRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const emojiPickerRef = useRef(null);
 
-    // Auto-scroll to bottom when new message arrives
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
+    // Auto-scroll to the newest message
     useEffect(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Close emoji picker when clicking outside
     useEffect(() => {
-        // Initialize chat socket
-        const socket = io('http://localhost:8000', {
+        function handleClickOutside(event) {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setShowEmojiPicker(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        // Connect to a dedicated chat socket connection
+        const socket = io(process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000', {
             withCredentials: true,
         });
         socketRef.current = socket;
 
-        // Join the stream room for chat routing
         socket.emit('join-stream', streamId);
 
-        // Listen for incoming messages
-        socket.on('new-chat-message', (messageData) => {
-            setMessages((prev) => [...prev, messageData]);
+        socket.on('new-chat-message', (msg) => {
+            setMessages((prev) => [...prev, msg]);
         });
 
         return () => {
@@ -38,112 +50,95 @@ export default function LiveChat({ streamId, currentUser }) {
     }, [streamId]);
 
     const handleSendMessage = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         if (!newMessage.trim() || !socketRef.current) return;
 
-        // Emit to backend
         socketRef.current.emit('send-chat-message', {
             streamId,
             message: newMessage.trim(),
             user: {
-                username: currentUser?.username || 'Anonymous',
-                avatar: currentUser?.avatar || '/default-avatar.png'
+                username: user?.username || 'Guest',
+                avatar: user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${Math.random()}`
             }
         });
 
         setNewMessage('');
+        setShowEmojiPicker(false);
+    };
+
+    const onEmojiClick = (emojiObject) => {
+        setNewMessage(prev => prev + emojiObject.emoji);
     };
 
     return (
-       <div className="flex flex-col h-[520px] w-full max-w-md bg-[#0f1117] rounded-2xl border border-white/10 shadow-xl overflow-hidden">
-            {/* Chat Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0b0d12]">
-  <div className="flex items-center gap-2">
-    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-    <h3 className="text-sm font-semibold text-white/90">Live Chat</h3>
-  </div>
-  <span className="text-xs text-white/40">{messages.length} msgs</span>
-</div>  
-
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-               {messages.length === 0 ? (
-  <div className="h-full flex items-center justify-center">
-    <p className="text-white/30 text-sm">
-      No messages yet.
-    </p>
-  </div>
-) : (
-  messages.map((msg, i) => {
-    const prev = messages[i - 1];
-    const isSameUser = prev?.username === msg.username;
-
-    return (
-      <div key={msg.id} className="flex gap-3">
-        
-        {/* Avatar (only if new user) */}
-        {!isSameUser ? (
-          <img
-            src={msg.avatar}
-            className="w-8 h-8 rounded-full object-cover mt-1"
-          />
-        ) : (
-          <div className="w-8" />
-        )}
-
-        <div className="flex flex-col">
-          
-          {/* Username row */}
-          {!isSameUser && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-white/90">
-                {msg.username}
-              </span>
-              <span className="text-[11px] text-white/40">
-                {new Date(msg.timestamp).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
+        <div className="flex flex-col h-full relative">
+            <div className="p-4 border-b border-gray-800 bg-gray-900/80">
+                <h3 className="font-bold text-white">Live Chat</h3>
             </div>
-          )}
-
-          {/* Message */}
-          <p className="text-sm text-white/80 leading-relaxed">
-            {msg.text}
-          </p>
-        </div>
-      </div>
-    );
-  })
-)}
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[400px] scrollbar-thin scrollbar-thumb-gray-800">
+                {messages.length === 0 ? (
+                    <div className="text-center text-gray-500 mt-4">Welcome to the chat room!</div>
+                ) : (
+                    messages.map((msg) => (
+                        <div key={msg.id} className="flex gap-3">
+                            <img src={msg.avatar} alt="avatar" className="w-8 h-8 rounded-full bg-gray-800" />
+                            <div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="font-semibold text-sm text-gray-200">{msg.username}</span>
+                                    <span className="text-xs text-gray-500">
+                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-gray-300 break-words">{msg.text}</p>
+                            </div>
+                        </div>
+                    ))
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <form
-  onSubmit={handleSendMessage}
-  className="p-3 border-t border-white/10 bg-[#0b0d12]"
->
-  <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 focus-within:ring-1 focus-within:ring-blue-500 transition">
-    
-    <input
-      type="text"
-      value={newMessage}
-      onChange={(e) => setNewMessage(e.target.value)}
-      placeholder="Message..."
-      className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
-    />
-
-    <button
-      type="submit"
-      disabled={!newMessage.trim()}
-      className="text-sm font-medium text-blue-400 hover:text-blue-300 disabled:text-white/20 transition"
-    >
-      Send
-    </button>
-  </div>
-</form>
+            <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-800 bg-gray-900/50 relative">
+                {/* Emoji Picker Popup */}
+                {showEmojiPicker && (
+                    <div ref={emojiPickerRef} className="absolute bottom-[100%] right-4 mb-2 z-50 shadow-2xl">
+                        <EmojiPicker 
+                            onEmojiClick={onEmojiClick}
+                            theme="dark"
+                            autoFocusSearch={false}
+                            searchPlaceHolder="Search emojis..."
+                            width={300}
+                            height={400}
+                        />
+                    </div>
+                )}
+                
+                <div className="flex gap-2 items-center">
+                    <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="p-2 text-gray-400 hover:text-blue-400 transition-colors bg-gray-950 rounded-xl border border-gray-800 hover:border-blue-500/50"
+                    >
+                        <Smile className="w-5 h-5" />
+                    </button>
+                    
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Say something..."
+                        className="flex-1 bg-gray-950 text-white rounded-xl px-4 py-3 text-sm border border-gray-800 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                    
+                    <button 
+                        type="submit"
+                        disabled={!newMessage.trim()}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.2)] disabled:shadow-none"
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }

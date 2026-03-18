@@ -15,8 +15,8 @@ export default function Home() {
 
   // 1. Fetch Live Streams (Renamed loading state to avoid conflict)
   const { data: liveData, isLoading: isLiveLoading } = useGetLiveStreamsQuery({ isLive: true });
-  const liveStreams = liveData?.data || [];
-
+  const liveStreams = liveData?.data?.streams || liveData?.data || [];
+  console.log(liveStreams)
   // 2. Fetch Regular Videos
   const { data, isLoading, isError } = useGetAllVideosQuery({
     ...(feedType === "subscribed" && { feed: "subscribed" })

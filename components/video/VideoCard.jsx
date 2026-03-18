@@ -2,7 +2,13 @@ import Link from "next/link";
 import { formatTimeAgo, formatViews } from "@/lib/formatters";
 
 export function VideoCard({ video,isLive,className }) {
-  const href = isLive ? `/live/stream_${video._id}` : `/watch/${video._id}`;
+  const displayName = video.ownerUsername || video.streamer?.username || video.streamer?.fullName || 'Unknown';
+  const displayAvatar = video.ownerAvatar 
+    || video.streamer?.avatar 
+    || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
+  const href = isLive
+    ? `/live/${video.roomId || `stream_${video.streamer?._id || video.streamer}`}`
+    : `/watch/${video._id}`;
   return (
     <div className="group flex flex-col gap-3">
       <Link href={href} className="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--surface-raised)]">
@@ -36,8 +42,8 @@ export function VideoCard({ video,isLive,className }) {
       <div className="flex gap-3">
         <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[var(--surface-raised)]">
           <img
-            src={video.ownerAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${video.ownerUsername}`}
-            alt={video.ownerUsername}
+            src={displayAvatar}
+            alt={displayName  }
             className="h-full w-full object-cover"
           />
         </div>
@@ -49,7 +55,7 @@ export function VideoCard({ video,isLive,className }) {
             </h3>
           </Link>
           <p className="mt-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-            {video.ownerUsername}
+            {displayName}
           </p>
           <div className="flex items-center text-xs text-[var(--text-muted)]">
             <span>{formatViews(video.views || 0)} views</span>

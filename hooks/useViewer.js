@@ -28,8 +28,8 @@ export const useViewer = (streamId, userId) => {
         })
     }
 
-    const initializeSocket = useCallback(() => {
-        const socket = io('http://localhost:8000', {
+    const initializeSocket = useCallback(async() => {
+        const socket = await io('http://localhost:4000', {
             withCredentials: true,
         })
 
