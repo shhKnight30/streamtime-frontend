@@ -1,231 +1,81 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
-import { useSelector } from "react-redux";
-import { socket } from "@/lib/socket";
-import * as mediasoupClient from "mediasoup-client";
-import { Users, AlertCircle } from "lucide-react";
+import { useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
+import { useViewer } from '@/hooks/useViewer'
+import LiveChat from '@/components/live/LiveChat' // <-- Import Chat
 
-export default function LiveViewerPage() {
-  const { streamId } = useParams();
-  const { user } = useSelector((state) => state.auth);
+export default function ViewerPage() {
+    const { streamId } = useParams()
+    const videoRef = useRef(null)
+    
+    // In a real app, get this from your Redux store / Auth context
+    const currentUser = { username: "Viewer_" + Math.floor(Math.random() * 1000) }; 
+    const userId = currentUser.username;
 
-  const videoRef = useRef(null);
-  const [status, setStatus] = useState("Connecting...");
-  const [viewerCount, setViewerCount] = useState(0);
-  const [streamTitle, setStreamTitle] = useState("");
-  const [isStreamActive, setIsStreamActive] = useState(true);
+    const { remoteStream, isLive, error, viewerCount, startViewing } = useViewer(streamId, userId)
 
-  // Mediasoup refs
-  const deviceRef = useRef(null);
-  const recvTransportRef = useRef(null);
-
-  useEffect(() => {
-    if (!streamId) return;
-
-    const initViewer = async () => {
-      if (!socket.connected) {
-    socket.connect();
-    await new Promise((resolve) => socket.once("connect", resolve));
-  }
-
-      setStatus("Joining stream...");
-      socket.emit("join-webrtc-stream", { streamId, userId: user?._id || "anonymous" });
-
-      // 1. Successfully joined the room
-      socket.once("stream-joined", ({ streamTitle, totalViewers }) => {
-        setStreamTitle(streamTitle);
-        setViewerCount(totalViewers);
-        setStatus("Loading video...");
-        startWebRTC();
-      });
-
-      // Handle stream not existing
-      socket.once("stream-error", ({ error }) => {
-        setStatus(`Error: ${error}`);
-        setIsStreamActive(false);
-      });
-    };
-
-    const startWebRTC = () => {
-      // 2. Get Router Capabilities
-      socket.emit("get-router-capabilities", { streamId });
-      
-      socket.once("router-capabilities", async ({ capabilities }) => {
-        try {
-          deviceRef.current = new mediasoupClient.Device();
-          await deviceRef.current.load({ routerRtpCapabilities: capabilities });
-
-          // 3. Create a Transport to RECEIVE Media
-          socket.emit("create-transport", { streamId, direction: "recv" });
-        } catch (err) {
-          console.error(err);
-          setStatus("Hardware/Browser not supported.");
+    useEffect(() => {
+        if (videoRef.current && remoteStream) {
+            videoRef.current.srcObject = remoteStream
         }
-      });
+    }, [remoteStream])
 
-      // 4. Connect the Transport
-      socket.once("transport-created", async ({ transport }) => {
-        recvTransportRef.current = deviceRef.current.createRecvTransport(transport);
+    useEffect(() => {
+        startViewing()
+    }, [])
 
-        recvTransportRef.current.on("connect", ({ dtlsParameters }, callback, errback) => {
-          socket.emit("connect-transport", { transportId: transport.id, dtlsParameters });
-          socket.once("transport-connected", () => callback());
-        });
-
-        // 5. Ask the server for the streamer's video/audio tracks
-        socket.emit("get-producers", { streamId });
-      });
-
-      // 6. Consume the Tracks
-      socket.once("producers-list", async ({ producers }) => {
-  if (producers.length === 0) {
-    setStatus("Waiting for creator to start video...");
-    return;
-  }
-
-  const stream = new MediaStream(); 
-
-  // ✅ FIX: Track which kinds (audio/video) we've already added
-  const consumedKinds = new Set();
-  const validProducers = producers.filter((producer) => {
-    if (consumedKinds.has(producer.kind)) return false; // Skip duplicates
-    consumedKinds.add(producer.kind);
-    return true;
-  });
-
-  // Loop through validProducers instead of the raw producers array
-  for (const producer of validProducers) {
-    socket.emit("consume", {
-      transportId: recvTransportRef.current.id,
-      producerId: producer.id,
-      rtpCapabilities: deviceRef.current.rtpCapabilities,
-    });
-
-    await new Promise((resolve) => {
-      const handleConsumerCreated = async ({ consumer }) => {
-        if (consumer.producerId !== producer.id) return; 
-
-        try {
-          const localConsumer = await recvTransportRef.current.consume({
-            id: consumer.id,
-            producerId: consumer.producerId,
-            kind: consumer.kind,
-            rtpParameters: consumer.rtpParameters,
-          });
-
-          stream.addTrack(localConsumer.track);
-        } catch (error) {
-          console.error(`Failed to consume ${consumer.kind} track:`, error);
-        } finally {
-          socket.off("consumer-created", handleConsumerCreated); 
-          resolve();
-        }
-      };
-      
-      socket.on("consumer-created", handleConsumerCreated);
-    });
-  }
-
-  if (videoRef.current) {
-    videoRef.current.srcObject = stream;
-    setStatus("Live");
-  }
-});
-    };
-
-    // --- Live Socket Listeners ---
-    socket.on("viewer-joined", ({ totalViewers }) => setViewerCount(totalViewers));
-    socket.on("viewer-left", ({ totalViewers }) => setViewerCount(totalViewers));
-    socket.on("stream-ended", () => {
-      setIsStreamActive(false);
-      setStatus("Stream has ended.");
-    });
-
-    initViewer();
-
-    // Cleanup when leaving page
-    return () => {
-      if (recvTransportRef.current) recvTransportRef.current.close();
-      socket.emit("leave-stream", streamId);
-      socket.off("stream-joined");
-      socket.off("stream-error");
-      socket.off("router-capabilities");
-      socket.off("transport-created");
-      socket.off("producers-list");
-      socket.off("viewer-joined");
-      socket.off("viewer-left");
-      socket.off("stream-ended");
-    };
-  }, [streamId, user]);
-
-  return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column: Video Player */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--border)] bg-black shadow-sm flex items-center justify-center">
-            
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              controls
-              className={`h-full w-full object-contain transition-opacity ${status === 'Live' ? 'opacity-100' : 'opacity-0'}`}
-            />
-            
-            {/* Status Overlay */}
-            {status !== "Live" && isStreamActive && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 backdrop-blur-sm z-10 text-white">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-                <p className="font-medium">{status}</p>
-              </div>
-            )}
-
-            {!isStreamActive && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[var(--surface-raised)] z-10 text-[var(--text-muted)]">
-                 <AlertCircle className="h-12 w-12 opacity-50" />
-                 <p className="text-lg font-medium">{status}</p>
-               </div>
-            )}
-          </div>
-
-          {/* Stream Info */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
-              {streamTitle || "Loading Stream..."}
-            </h1>
-            <div className="mt-2 flex items-center gap-4 text-sm text-[var(--text-muted)]">
-              <span className="flex items-center gap-1 font-medium text-red-500">
-                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> LIVE
-              </span>
-              <span className="flex items-center gap-1">
-                <Users className="h-4 w-4" /> {viewerCount} watching
-              </span>
+    return (
+        <div className="p-6 max-w-7xl mx-auto">
+            <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">Live Stream</h1>
+                <div className="flex items-center gap-2 bg-gray-900 px-4 py-2 rounded-full text-sm">
+                    <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
+                    <span>{viewerCount} Viewers</span>
+                </div>
             </div>
-          </div>
-        </div>
 
-        {/* Right Column: Live Chat Placeholder */}
-        <div className="flex h-[400px] lg:h-[600px] flex-col rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-sm">
-          <div className="border-b border-[var(--border)] p-4">
-            <h2 className="font-bold text-[var(--text-primary)]">Live Chat</h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center text-center text-[var(--text-muted)]">
-            <p className="text-sm">Welcome to the live chat!</p>
-            <p className="text-xs mt-1">Chat feature coming soon.</p>
-          </div>
-          <div className="border-t border-[var(--border)] p-4 flex gap-2">
-            <input
-              type="text"
-              placeholder="Chat is disabled"
-              disabled
-              className="flex-1 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2 text-sm outline-none"
-            />
-          </div>
+            {/* Grid Layout: Video on left (auto-scales), Chat on right (fixed width) */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                
+                {/* Video Player Column */}
+                <div className="lg:col-span-3 aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative">
+                   {(!isLive && !remoteStream) || error ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-10">
+            {error ? (
+                <>
+                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+                        <span className="text-red-500 text-2xl">🔒</span>
+                    </div>
+                    <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
+                    <p className="text-red-400">{error}</p>
+                    <button 
+                        onClick={() => window.history.back()}
+                        className="mt-6 px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    >
+                        Go Back
+                    </button>
+                </>
+            ) : (
+                <p className="text-gray-400">Waiting for stream to start...</p>
+            )}
         </div>
-      </div>
-    </div>
-  );
+    ) : null}
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        controls
+                        className="w-full h-full object-contain"
+                    />
+                </div>
+
+                {/* Chat Column */}
+                <div className="lg:col-span-1">
+                    <LiveChat streamId={streamId} currentUser={currentUser} />
+                </div>
+                
+            </div>
+        </div>
+    )
 }
