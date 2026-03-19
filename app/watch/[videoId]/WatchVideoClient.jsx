@@ -27,14 +27,16 @@ export function WatchVideoClient({ videoId }) {
   // console.log(video)
   const secureVideoURL = video?.videoURL
   const secureThumbnail = video?.thumbnail
+
+  
+  const [localLikeDelta, setLocalLikeDelta] = useState(null)
+  const [localIsLiked, setLocalIsLiked] = useState(null)
   // console.log(secureVideoURL)
   const likeCount = localLikeDelta !== null
     ? (video?.likes || 0) + localLikeDelta
     : (video?.likes || 0)
 
 // Track delta locally, source of truth stays on server
-const [localLikeDelta, setLocalLikeDelta] = useState(null)
-const [localIsLiked, setLocalIsLiked] = useState(null)
 
 const handleLike = requireAuth(async () => {
     const currentIsLiked = localIsLiked ?? isLiked
