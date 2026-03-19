@@ -31,7 +31,6 @@ export function VideoTable({ videos }) {
     }
   };
 
-  // ✅ Open modal and populate data
   const handleEditClick = (video) => {
     setEditingVideo(video);
     setEditForm({
@@ -43,20 +42,22 @@ export function VideoTable({ videos }) {
 
   // ✅ Handle Edit Form Submission
   const handleUpdate = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      const formData = new FormData();
-      formData.append('title', editForm.title);
-      formData.append('description', editForm.description);
-      formData.append('isPublished', editForm.isPublished);
-      await updateVideo({ videoId: editingVideo._id, formData }).unwrap();
-            
-      toast.success("Video updated successfully");
-      setEditingVideo(null); // Close modal
+        await updateVideo({
+            videoId: editingVideo._id,
+            formData: {
+                title: editForm.title,
+                description: editForm.description,
+                isPublished: Boolean(editForm.isPublished),  
+            }
+        }).unwrap()
+        toast.success("Video updated successfully")
+        setEditingVideo(null)
     } catch (err) {
-      toast.error(err?.data?.message || "Failed to update video");
+        toast.error(err?.data?.message || "Failed to update video")
     }
-  };
+}
 
   // ✅ Handle form input changes
   const handleChange = (e) => {

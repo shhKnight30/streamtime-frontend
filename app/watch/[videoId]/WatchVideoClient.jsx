@@ -160,7 +160,7 @@ const handleLike = requireAuth(async () => {
               disabled={liking}
             >
               <ThumbsUp className={`mr-2 h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
-              {video.likes || 0}
+              {likeCount}
             </Button>
             <div className="h-5 w-[1px] bg-[var(--border)]"></div>
             <Button variant="ghost" className="rounded-none rounded-r-full px-4 hover:bg-[var(--surface)]">

@@ -71,7 +71,6 @@ export default function LiveViewerPage() {
 
   // Track consumer creation to avoid duplicates during polling
   const pendingConsumers = useRef(new Set());
-  pollInterval = setInterval(fetchAndRenderProducers, 4000)
   // ── Consume one producer track ─────────────────────────────────────────────
   const consumeTrack = useCallback(async (producer) => {
     if (
@@ -192,6 +191,7 @@ export default function LiveViewerPage() {
             socket.once("connect", () => { clearTimeout(t); resolve(); });
             socket.once("connect_error", (err) => {
               clearTimeout(t);
+              
               reject(new Error(`Connection failed: ${err.message}`));
             });
           });
@@ -257,8 +257,30 @@ export default function LiveViewerPage() {
         });
 
         // 6. Initial fetch + polling (in case screen share is added later)
+        socket.on('new-producer', async ({ producerId, kind }) => {
+    if (consumersRef.current.has(producerId) || pendingConsumers.current.has(producerId)) return
+
+    const track = await consumeTrack({ id: producerId, kind })
+    if (!track) return
+
+    const allConsumers = Array.from(consumersRef.current.values())
+    const videoTracks = allConsumers.filter(c => c.kind === 'video').map(c => c.track)
+    const audioTracks = allConsumers.filter(c => c.kind === 'audio').map(c => c.track)
+
+    if (videoTracks.length >= 2) {
+        setDualVideo(true)
+        if (pipVideoRef.current) pipVideoRef.current.srcObject = new MediaStream([videoTracks[0]])
+        if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([videoTracks[1], ...audioTracks])
+    } else if (videoTracks.length === 1) {
+        setDualVideo(false)
+        if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([...videoTracks, ...audioTracks])
+    }
+    setIsLoading(false)
+})
         await fetchAndRenderProducers();
-        pollInterval = setInterval(fetchAndRenderProducers, 4000);
+        
+
+        // pollInterval = setInterval(fetchAndRenderProducers, 4000);
       } catch (err) {
         console.error("Viewer init failed:", err);
         if (isMounted) {
