@@ -28,21 +28,27 @@ export function WatchVideoClient({ videoId }) {
   const secureVideoURL = video?.videoURL
   const secureThumbnail = video?.thumbnail
   // console.log(secureVideoURL)
-  const [localLikes, setLocalLikes] = useState(video?.likes || 0);
-  useEffect(() => {
-    if (video?.likes !== undefined) setLocalLikes(video.likes);
-  }, [video?.likes]);
-  const handleLike = requireAuth(async () => {
-    if (!user) { toast.error("Please log in to like"); return; }
+  const likeCount = localLikeDelta !== null
+    ? (video?.likes || 0) + localLikeDelta
+    : (video?.likes || 0)
+
+// Track delta locally, source of truth stays on server
+const [localLikeDelta, setLocalLikeDelta] = useState(null)
+const [localIsLiked, setLocalIsLiked] = useState(null)
+
+const handleLike = requireAuth(async () => {
+    const currentIsLiked = localIsLiked ?? isLiked
+    setLocalIsLiked(!currentIsLiked)
+    setLocalLikeDelta(prev => (prev ?? 0) + (currentIsLiked ? -1 : 1))
     try {
-      await toggleLike({ contentId: videoId, contentType: 'video' }).unwrap();
-      // optimistic update
-      setLocalLikes(prev => isLiked ? prev - 1 : prev + 1);
-      refetchLike();
-    } catch (err) {
-      toast.error("Failed to toggle like");
+        await toggleLike({ contentId: videoId, contentType: 'video' }).unwrap()
+    } catch {
+        // Revert optimistic update
+        setLocalIsLiked(null)
+        setLocalLikeDelta(null)
+        toast.error("Failed to toggle like")
     }
-  });
+})
   const { data: subStatus } = useCheckSubscriptionStatusQuery(video?.owner, {
     skip: !video?.owner || !user,
   });

@@ -71,7 +71,7 @@ export default function LiveViewerPage() {
 
   // Track consumer creation to avoid duplicates during polling
   const pendingConsumers = useRef(new Set());
-
+  pollInterval = setInterval(fetchAndRenderProducers, 4000)
   // ── Consume one producer track ─────────────────────────────────────────────
   const consumeTrack = useCallback(async (producer) => {
     if (

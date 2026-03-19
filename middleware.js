@@ -10,15 +10,19 @@ export default function proxy(request) {
   
   // Protect all routes outlined in your architecture plan
   const protectedPaths = [
-    "/feed", "/liked", "/playlists", "/tweets", 
-    "/upload", "/go-live", "/dashboard", "/channel/edit"
-  ];
+    "/feed", "/liked", "/playlists", "/tweets",
+    "/upload", "/go-live", "/dashboard", "/channel/edit",
+    "/activity",   // ← ADD
+    "/settings",   // ← ADD
+]
   
   const isProtectedRoute = protectedPaths.some((path) => pathname.startsWith(path));
 
   // Redirect unauthorized users to login
   if (isProtectedRoute && !hasToken) {
-    return NextResponse.redirect(new URL("/login", request.url));
+     const loginUrl = new URL("/login", request.url)
+        loginUrl.searchParams.set("redirect", pathname)  // ← ADD: redirect back after login
+        return NextResponse.redirect(loginUrl)
   }
 
   // Redirect authenticated users away from auth pages

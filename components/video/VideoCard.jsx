@@ -49,7 +49,7 @@ export function VideoCard({ video,isLive,className }) {
         </div>
 
         <div className="flex flex-col overflow-hidden">
-          <Link href={`/watch/${video._id}`}>
+          <Link href={href}>  {/* href is already computed above as /live/... or /watch/... */}
             <h3 className="line-clamp-2 text-sm font-semibold text-[var(--text-primary)] group-hover:text-blue-500">
               {video.title}
             </h3>

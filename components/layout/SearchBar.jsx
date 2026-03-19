@@ -20,7 +20,7 @@ export function SearchBar() {
   useEffect(() => {
     // Whenever the debounced term changes, update the URL
     if (debouncedSearchTerm) {
-      router.push(`/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
+      router.replace(`/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
     } else if (debouncedSearchTerm === "" && searchParams.has("q")) {
       // If cleared, go back to home or a default search state
       router.push("/");
