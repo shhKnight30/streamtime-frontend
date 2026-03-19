@@ -26,7 +26,7 @@ export default function WatchHistoryPage() {
 
 
 
-  const watchHistory = data?.data || [];
+  const watchHistory = data?.data?.videos || [];
 
 
 

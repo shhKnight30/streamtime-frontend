@@ -366,11 +366,28 @@ export default function CreatorLiveStudio() {
   };
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────────
-  useEffect(() => {
+ useEffect(() => {
     return () => {
-      if (isLive) cleanupStream();
+        if (isLive) {
+            // Fire and forget is acceptable for cleanup — but must handle sync parts
+            videoProducerRef.current?.close();
+            audioProducerRef.current?.close();
+            screenProducerRef.current?.close();
+            sendTransportRef.current?.close();
+            if (socket.connected) {
+                socket.emit("stream-ended", { streamId });
+                socket.disconnect();
+            }
+            // DB update is non-critical and can be async
+            if (dbStreamId) {
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/live-stream/${dbStreamId}/stop`, {
+                    method: "POST",
+                    credentials: "include"
+                }).catch(() => {});
+            }
+        }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}, []); // eslint-disable-line // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Share link ───────────────────────────────────────────────────────────────
   const viewerLink =

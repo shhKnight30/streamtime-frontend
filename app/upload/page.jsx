@@ -187,6 +187,7 @@ export default function UploadPage() {
   };
 
   const onSubmit = (async (data) => {
+    
     if (!videoFile) {
       toast.error("Please select a video file.");
       return;

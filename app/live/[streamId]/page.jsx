@@ -169,149 +169,91 @@ export default function LiveViewerPage() {
   }, [streamId, consumeTrack]);
 
   // ── Main viewer init ────────────────────────────────────────────────────────
-  useEffect(() => {
+useEffect(() => {
     if (!streamId) return;
 
-    let isMounted     = true;
-    let pollInterval  = null;
+    let isMounted = true;
+    let pollInterval = null;
 
-    const viewerId =
-      user?._id || `guest_${Math.random().toString(36).slice(2, 9)}`;
-
+    const viewerId = user?._id || `guest_${Math.random().toString(36).slice(2, 9)}`;
+    
+    // Store event handler references for cleanup
+    const handlers = {
+        viewerCount: (d) => setViewerCount(d.count ?? d.currentViewerCount ?? 0),
+        streamEnded: () => {
+            setIsLive(false);
+            setError("This stream has ended.");
+            if (mainVideoRef.current) mainVideoRef.current.srcObject = null;
+            if (pipVideoRef.current) pipVideoRef.current.srcObject = null;
+        },
+        newProducer: async ({ producerId, kind }) => {  // ← stored reference
+            if (consumersRef.current.has(producerId) || pendingConsumers.current.has(producerId)) return;
+            
+            const track = await consumeTrack({ id: producerId, kind });
+            if (!track) return;
+            
+            const allConsumers = Array.from(consumersRef.current.values());
+            const videoTracks = allConsumers.filter(c => c.kind === 'video').map(c => c.track);
+            const audioTracks = allConsumers.filter(c => c.kind === 'audio').map(c => c.track);
+            
+            if (videoTracks.length >= 2) {
+                setDualVideo(true);
+                if (pipVideoRef.current) pipVideoRef.current.srcObject = new MediaStream([videoTracks[0]]);
+                if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([videoTracks[1], ...audioTracks]);
+            } else if (videoTracks.length === 1) {
+                setDualVideo(false);
+                if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([...videoTracks, ...audioTracks]);
+            }
+            if (isMounted) setIsLoading(false);
+        }
+    };
+    
     const init = async () => {
-      try {
-        // 1. Connect shared socket
-        if (!socket.connected) {
-          socket.connect();
-          await new Promise((resolve, reject) => {
-            const t = setTimeout(
-              () => reject(new Error("Socket connection timed out")),
-              10000
-            );
-            socket.once("connect", () => { clearTimeout(t); resolve(); });
-            socket.once("connect_error", (err) => {
-              clearTimeout(t);
-              
-              reject(new Error(`Connection failed: ${err.message}`));
-            });
-          });
+        try {
+            if (!socket.connected) {
+                socket.connect();
+                await new Promise((resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error("Socket connection timed out")), 10000);
+                    socket.once("connect", () => { clearTimeout(t); resolve(); });
+                    socket.once("connect_error", (err) => { clearTimeout(t); reject(err); });
+                });
+            }
+            if (!isMounted) return;
+            
+            socket.on("viewer-count-update", handlers.viewerCount);
+            socket.on("stream-ended", handlers.streamEnded);
+            socket.on('new-producer', handlers.newProducer);  // ← use stored reference
+            
+            // ... rest of init
+        } catch (err) {
+            if (isMounted) {
+                setError(err.message || "Could not connect.");
+                setIsLoading(false);
+            }
         }
-
-        if (!isMounted) return;
-
-        // 2. Attach persistent event listeners
-        socket.on("viewer-count-update", (d) =>
-          setViewerCount(d.count ?? d.currentViewerCount ?? 0)
-        );
-        socket.on("stream-ended", () => {
-          setIsLive(false);
-          setError("This stream has ended.");
-          if (mainVideoRef.current) mainVideoRef.current.srcObject = null;
-          if (pipVideoRef.current)  pipVideoRef.current.srcObject  = null;
-        });
-
-        // 3. Join the stream room
-        const joinRes = await socketRequest(
-          "join-webrtc-stream",
-          { streamId, userId: viewerId },
-          "stream-joined"
-        );
-
-        if (!isMounted) return;
-
-        setIsLive(true);
-        setViewerCount(joinRes.totalViewers ?? 0);
-        if (joinRes.streamTitle) setStreamTitle(joinRes.streamTitle);
-
-        // 4. Load mediasoup Device
-        const { capabilities } = await socketRequest(
-          "get-router-capabilities",
-          { streamId },
-          "router-capabilities"
-        );
-
-        deviceRef.current = new mediasoupClient.Device();
-        await deviceRef.current.load({ routerRtpCapabilities: capabilities });
-
-        // 5. Create receive transport
-        const { transport: transportOpts } = await socketRequest(
-          "create-transport",
-          { streamId, direction: "recv" },
-          "transport-created"
-        );
-
-        const transport = deviceRef.current.createRecvTransport(transportOpts);
-        transportRef.current = transport;
-
-        transport.on("connect", async ({ dtlsParameters }, callback, errback) => {
-          try {
-            await socketRequest(
-              "connect-transport",
-              { transportId: transport.id, dtlsParameters },
-              "transport-connected"
-            );
-            callback();
-          } catch (err) {
-            errback(err);
-          }
-        });
-
-        // 6. Initial fetch + polling (in case screen share is added later)
-        socket.on('new-producer', async ({ producerId, kind }) => {
-    if (consumersRef.current.has(producerId) || pendingConsumers.current.has(producerId)) return
-
-    const track = await consumeTrack({ id: producerId, kind })
-    if (!track) return
-
-    const allConsumers = Array.from(consumersRef.current.values())
-    const videoTracks = allConsumers.filter(c => c.kind === 'video').map(c => c.track)
-    const audioTracks = allConsumers.filter(c => c.kind === 'audio').map(c => c.track)
-
-    if (videoTracks.length >= 2) {
-        setDualVideo(true)
-        if (pipVideoRef.current) pipVideoRef.current.srcObject = new MediaStream([videoTracks[0]])
-        if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([videoTracks[1], ...audioTracks])
-    } else if (videoTracks.length === 1) {
-        setDualVideo(false)
-        if (mainVideoRef.current) mainVideoRef.current.srcObject = new MediaStream([...videoTracks, ...audioTracks])
-    }
-    setIsLoading(false)
-})
-        await fetchAndRenderProducers();
-        
-
-        // pollInterval = setInterval(fetchAndRenderProducers, 4000);
-      } catch (err) {
-        console.error("Viewer init failed:", err);
-        if (isMounted) {
-          setError(err.message || "Could not connect to the stream.");
-          setIsLoading(false);
-        }
-      }
     };
-
+    
     init();
-
+    
     return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
-
-      // Signal leave & clean up
-      socket.emit("leave-stream", streamId);
-      socket.off("viewer-count-update");
-      socket.off("stream-ended");
-
-      // Close consumers & transport (don't disconnect — socket may be reused)
-      consumersRef.current.forEach((c) => c.close());
-      consumersRef.current.clear();
-      transportRef.current?.close();
-      transportRef.current = null;
-      deviceRef.current    = null;
-
-      // Disconnect only if no other page is using the socket
-      if (socket.connected) socket.disconnect();
+        isMounted = false;
+        clearInterval(pollInterval);
+        
+        socket.emit("leave-stream", streamId);
+        socket.off("viewer-count-update", handlers.viewerCount);
+        socket.off("stream-ended", handlers.streamEnded);
+        socket.off("new-producer", handlers.newProducer);  // ← proper cleanup
+        
+        consumersRef.current.forEach((c) => c.close());
+        consumersRef.current.clear();
+        pendingConsumers.current.clear();
+        transportRef.current?.close();
+        transportRef.current = null;
+        deviceRef.current = null;
+        
+        if (socket.connected) socket.disconnect();
     };
-  }, [streamId, user, fetchAndRenderProducers]);
+}, [streamId, user, fetchAndRenderProducers, consumeTrack]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // RENDER
