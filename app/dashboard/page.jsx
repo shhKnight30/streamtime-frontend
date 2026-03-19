@@ -27,7 +27,7 @@ export default function LiveDashboard() {
         try {
             // NOTE: Replace with your actual API hook (e.g., RTK Query useCreateLiveStreamMutation)
             // or standard axios call pointing to your liveStream.controller.js createLiveStream route
-            const response = await fetch('http://localhost:8000/api/v1/livestreams', {
+            const response = await fetch('http://localhost:4000/api/v1/livestreams', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

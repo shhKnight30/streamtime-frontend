@@ -199,7 +199,7 @@ export function WatchVideoClient({ videoId }) {
         </div>
         <p className="whitespace-pre-wrap">{video.description}</p>
       </div>
-      <CommentSection videoId={videoId} />
+      <CommentSection contentId={videoId} contentType="Video"/>
       {showPlaylistModal && (
         <AddToPlaylistModal
           videoId={videoId}
